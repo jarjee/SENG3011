@@ -1,7 +1,6 @@
 import System.IO
 import Control.Monad
 import Data.List
-import Data.String.Utils
 
 data OrderBookEntry = 
         OrderBookEntry { instrument :: String,
@@ -27,7 +26,14 @@ main = do
     handle <- openFile "../test/test.csv" ReadMode
     content <- hGetContents handle
     let unsplit = lines content
-    let records = map (split ",") $ tail unsplit
-    mapM (putStrLn) $ map (foldl (++) "" . intersperse "|") records
+    --let test = split (==5) [1,2,3,5,6,7,8,9,10]
+    -- let records = map (split (== ",")) $ unsplit
+    -- mapM (putStrLn) $ map (foldl (++) "" . intersperse "|") records
     hClose handle
 
+split :: (a -> Bool) -> [a] -> [[a]]
+split pr [] = []
+split pr l = h : (split pr f)
+    where
+        (h,t) = break pr l
+        f = if null t then [] else tail t
