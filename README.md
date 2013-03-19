@@ -7,6 +7,7 @@ Functional requirements
 =======================
 
 |Id|Functional requirement| Comments|
+|:---|:---|:---|
 |1|Reading a correctly formatted Sirca orders file (1 day only)|See "Introduction to order books" document|
 |2|Choosing an appropriate algorithmic trading strategy and setting its different parameters|See Section 4.|
 |3|Generating algorithmic orders for 1 particular day|List of techniques for generating algorithmic orders will be provided as work progresses.|
@@ -19,6 +20,7 @@ Quality Requirements
 ====================
 
 |Id|Quality requirement|Comments|
+|:---|:---|:---|
 |1|Speed of execution (transactions per second)||
 |2|Usability of the GUI||
 |3|Quality of the visualisation||
