@@ -2,6 +2,11 @@ import System.IO
 import Control.Monad
 import Data.List
 
+import Types
+import Orderbook
+import Trader
+import Views
+
 data OrderBookEntry = 
         OrderBookEntry { instrument :: String,
                          date :: String,
@@ -24,10 +29,11 @@ data OrderBookEntry =
 
 main = do
     handle <- openFile "../test/test.csv" ReadMode
-    content <- hGetContents handle
-    let unsplit = lines content
-    let records = map (split (== ',')) $ unsplit
-    mapM (putStrLn) $ map (foldl (++) "" . intersperse "|") records
+    trades <- getTrades handle
+    let tradeHistory = processOrderbook trades
+    let strategy = TradeBadly
+    let tradeRecommendations = generateTrades tradeHistory strategy
+    writeFile "output.csv" (csvRep tradeRecommendations)
     hClose handle
 
 split :: (a -> Bool) -> [a] -> [[a]]
