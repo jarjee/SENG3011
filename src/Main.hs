@@ -9,11 +9,10 @@ import Views
 
 main = do
     handle <- openFile "../test/test.csv" ReadMode
-    trades <- hGetContents $ getTrades handle
+    trades <- fmap getTrades $ hGetContents handle
     let tradeHistory = processOrderbook trades
-    let strategy = TradeBadly
+    let strategy = TradeBadly 50
     let tradeRecommendations = generateTrades tradeHistory strategy
     writeFile "output.csv" (csvRep tradeRecommendations)
     hClose handle
-
 

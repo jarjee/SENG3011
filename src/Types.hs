@@ -1,4 +1,4 @@
-import System.IO
+module Types (getTrades, csvRep) where
 -- types go here
 data OrderBookEntry = 
         OrderBookEntry { instrument :: String,
@@ -39,5 +39,8 @@ getTrades handle = do
 
 orderEntry :: [String] -> OrderBookEntry
 orderEntry (inst:dat:tim:recTyp:pri:vol:undisVol:val:qual:trId:bId:aId:entryTim:oldPri:oldVol:buyerBrokId:sellerBrokId:[]) = OrderBookEntry inst dat tim recTyp pri vol undisVol val qual trId bId aId entryTim oldPri oldVol buyerBrokId sellerBrokId
-orderEntry [] = undefined
-orderEntry _ = undefined
+orderEntry [] = error "orderEntry cannot take in an empty list! CSV file is not of a valid format!"
+orderEntry _ = error "orderEntry must take in exactly the right number of elements! CSV is invalid!"
+
+csvRep :: [OrderBookEntry] -> String
+csvRep orders = undefined
