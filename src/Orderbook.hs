@@ -6,8 +6,8 @@ module Orderbook (processOrderbook) where
 -- BidOrder, AskOrder??
 
 --type Instr = String
---type Date = Haskell date type
---type Time = Haskell time type
+--type Date = crazy Haskell date type
+--type Time = System.Time  
 --type RecType = String -- "enter", "amend", "delete"
 --type Price = Float
 --type Volume = Int
@@ -23,9 +23,9 @@ module Orderbook (processOrderbook) where
 
 -- Functions related to changing data in orders
 -- three functions:
--- Enter :: someData - > Order
--- Amend :: Int -> Order -> Order
--- Delete :: Order -> Nothing --not Haskell nothing just something that is nothing, I'm a monkey not a Guru remember! :P
+-- enter :: someData - > Order   -- submitOrder
+-- amend :: Int -> Order -> Order    -- amendOrder = decreaseVol | IncreaseVol | amendPrice
+-- deleteOrder :: Order -> Nothing --not Haskell nothing just something that is nothing, I'm a monkey not a Guru remember! :P
 
 
 -- Actually process the order book
