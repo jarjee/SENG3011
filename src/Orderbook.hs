@@ -1,46 +1,62 @@
 --This will contain the Orderbook simulation code
 module Orderbook (processOrderbook) where
 
--- This is all for defining a new type for orders (maybe else where??)
--- Order data type
--- BidOrder, AskOrder??
-
---type Instr = String
---type Date = crazy Haskell date type
---type Time = System.Time  
---type RecType = String -- "enter", "amend", "delete"
---type Price = Float
---type Volume = Int
---type Value = Int
---type TransID = Int ?
---type BidID = Int
---type AskId = Int
---type OrderType = OrdType -- OrdType = Bid | Ask
-
--- data Order = Order Instr Date Time RecType 
-                     -- Price Volume Value TransID BidID AskID OrderType
-
-
 -- Functions related to changing data in orders
 -- three functions:
 -- enter :: someData - > Order   -- submitOrder
--- amend :: Int -> Order -> Order    -- amendOrder = decreaseVol | IncreaseVol | amendPrice
+-- amend :: Int -> Order -> Order    -- amendOrder = ammendVol | amendPrice
 -- deleteOrder :: Order -> Nothing --not Haskell nothing just something that is nothing, I'm a monkey not a Guru remember! :P
 
+------------------------------------------------------------------------------
+
+enterOrder = undefined
+
+amendOrder = undefined
+
+deleteOrder = undefined
+
+-------------------------------------------------------------------------------
 
 -- Actually process the order book
 processOrderbook = undefined
+-- call ordering functions
+-- add spread and step data
 
--- where do we get the orders from?
--- assuming orders come in from somewhere in lists of data types (bid and ask)
+-------------------------------------------------------------------------------
+sortBids :: BidList -> BidList
+sortBids bids = sortBy bidOrdering (sortBy (compare `on` time) bids)
+
+bidOrdering a b      | a > b = GT
+                     | otherwise LT
+
+--------------------------------------------------------------------------------
+sortAsks :: AskList -> AskList
+sortAsks = undefined
+sortAsks asks = sortBy askOrdering (sortBy (compare `on` time) asks)
+
+askOrdering a b      | a < b = GT
+                     | otherwise LT
+
+--------------------------------------------------------------------------------
+
+createOrderBook :: BidList -> AskList -> OrderBook
+createOrderBook  = undefined
+
+--------------------------------------------------------------------------------
+
+calculateSpread :: BidList -> AskList -> Float
+calculateSpread a b = abs ( ( (head a) . price ) 
+                     - ( (head b) . price ) )
+
+---------------------------------------------------------------------------------
+
+-- still not 100% sure what this step business is
+calculatePriceStep :: OrderBook -> Float
+calculatePriceStep = undefined
+
+---------------------------------------------------------------------------------
+
 -- do we assume they are for one company only?
--- order asks from lowest to highest price, earliest to latest (i think)
--- order bids from highest to lowest price, earliest to latest (i think)
--- going to do more research into the process before i write more crap here
-
--- spread: difference in price between best bid and best ask at a time
--- calculateSpread :: Int -> OrderBook -> Float
--- input time, order book, output spread
 
 -- price step: minimum diff in price between 2 groups of same price orders
 
