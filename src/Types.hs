@@ -2,24 +2,26 @@ module Types (getTrades, csvRep) where
 -- types go here
 data OrderBookEntry = 
         OrderBookEntry { instrument :: String,
-                         date :: String,
+                         date :: Integer,
                          time :: String,
-                         recordType :: String,
-                         price :: String,
-                         volume :: String,
-                         undisclosedVolume :: String,
-                         value :: String,
+                         recordType :: RecordType,
+                         price :: Float,
+                         volume :: Integer,
+                         undisclosedVolume :: Integer,
+                         value :: Float,
                          qualifiers :: String,
-                         transId :: String,
-                         bidId :: String,
-                         askId :: String,
+                         transId :: Integer,
+                         bidId :: Integer,
+                         askId :: Integer,
+			 bidAsk :: String,
                          entryTime :: String,
-                         oldPrice :: String,
-                         oldVolume :: String,
-                         buyerBrokerId :: String,
-                         sellerBrokerId :: String
+                         oldPrice :: Float,
+                         oldVolume :: Integer,
+                         buyerBrokerId :: Integer,
+                         sellerBrokerId :: Integer
         }
 
+data RecordType = AMEND | CANCEL_TRADE | DELETE | ENTER | OFFTR | TRADE deriving (Show, Read, Eq)
 
 split :: (a -> Bool) -> [a] -> [[a]] 
 split pr [] = []
@@ -38,9 +40,10 @@ getTrades handle = do
 	map (orderEntry . split (==',')) records
 
 orderEntry :: [String] -> OrderBookEntry
-orderEntry (inst:dat:tim:recTyp:pri:vol:undisVol:val:qual:trId:bId:aId:entryTim:oldPri:oldVol:buyerBrokId:sellerBrokId:[]) = OrderBookEntry inst dat tim recTyp pri vol undisVol val qual trId bId aId entryTim oldPri oldVol buyerBrokId sellerBrokId
+orderEntry (inst:dat:tim:recTyp:pri:vol:undisVol:val:qual:trId:bId:aId:ba:entryTim:oldPri:oldVol:buyerBrokId:sellerBrokId:[]) = OrderBookEntry inst (read dat) tim (read recTyp) (read pri) (read vol) (read undisVol) (read val) qual (read trId) (read bId) (read aId) ba entryTim (read oldPri) (read oldVol) (read buyerBrokId) (read sellerBrokId)
 orderEntry [] = error "orderEntry cannot take in an empty list! CSV file is not of a valid format!"
 orderEntry _ = error "orderEntry must take in exactly the right number of elements! CSV is invalid!"
 
+--Final Output
 csvRep :: [OrderBookEntry] -> String
 csvRep orders = undefined

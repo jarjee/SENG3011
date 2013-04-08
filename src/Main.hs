@@ -15,4 +15,3 @@ main = do
     let tradeRecommendations = generateTrades tradeHistory strategy
     writeFile "output.csv" (csvRep tradeRecommendations)
     hClose handle
-
