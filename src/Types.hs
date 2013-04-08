@@ -21,6 +21,13 @@ data OrderBookEntry =
                          sellerBrokerId :: Integer
         }
 
+-- maybe BidList, AskList and OrderBook types...
+data OrderBook = 
+	OrderBook 	{ 	askList :: [OrderBookEntry],
+				bidList :: [OrderBookEntry],
+				spread :: Float
+			}
+
 data RecordType = AMEND | CANCEL_TRADE | DELETE | ENTER | OFFTR | TRADE deriving (Show, Read, Eq)
 
 split :: (a -> Bool) -> [a] -> [[a]] 
