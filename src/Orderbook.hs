@@ -10,14 +10,18 @@ import Data.List
 
 ------------------------------------------------------------------------------
 
-enterOrder = undefined
--- add to bid/ask list depending on type
+-- enterOrder = OrderBookEntry (a million things)
+-- add to list of all orders
+-- process orders
 
+-- amendOrder :: OrderBookEntry -> Float -> OrderBookEntry | OrderBookEntry -> Integer -> OrderBookEntry
 amendOrder = undefined
--- add to bid/ask 
--- reprocess orderbook
+-- add to order list
+-- process orderbook
 
 deleteOrder = undefined
+-- remove from list/orderbook
+-- do nothing
 
 
 ------------------------------------------------------------------------------
