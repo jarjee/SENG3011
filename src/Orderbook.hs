@@ -1,8 +1,9 @@
---This will contain the Orderbook simulation code
-module Orderbook (processOrderbook) where
+module Orderbook (processOrderbook, splitOrders) where
 
--- Functions related to changing data in orders
--- three functions:
+import Types
+import Data.List
+
+
 -- enter :: someData - > Order   -- submitOrder
 -- amend :: Int -> Order -> Order    -- amendOrder = ammendVol | amendPrice
 -- deleteOrder :: Order -> Nothing --not Haskell nothing just something that is nothing, I'm a monkey not a Guru remember! :P
@@ -28,32 +29,32 @@ deleteOrder = undefined
 splitOrders :: [OrderBookEntry] -> ([OrderBookEntry], [OrderBookEntry])
 splitOrders [] = ([], [])
 splitOrders (x : xs)
-                     | (x . bidAsk == "B")    = (x : bid, ask)
+                     | ((x . bidAsk) == "B")    = (x : bid, ask)
                      | otherwise = (bid, x : ask)
                    where
-                     ~(bid, ask) = splitList p xs
+                     ~(bid, ask) = splitOrders xs
 
 -------------------------------------------------------------------------------
 
 -- STEP 2: Sort orders on time and price criteria
 
 sortBidsAsks :: ([OrderBookEntry], [OrderBookEntry]) -> ([OrderBookEntry], [OrderBookEntry])
-sortBidsAsks orders = sortBids (fst orders), 
-                     sortAsks (snd orders)
+sortBidsAsks orders = ( sortBids (fst orders), 
+                     					sortAsks (snd orders) )
 
 sortBids :: [OrderBookEntry] -> [OrderBookEntry]
-sortBids bids = sortBy bidOrdering (sortBy (compare `on` time) bids)
+sortBids bids = sortBy bidOrdering (sortBy (compare `on` (time bids)) bids)
 
-bidOrdering a b      | a > b = GT
-                     | otherwise LT
+bidOrdering a b      | (price a) > (price b) = GT
+                     | otherwise = LT
 
 sortAsks :: [OrderBookEntry] -> [OrderBookEntry]
-sortAsks asks = sortBy askOrdering (sortBy (compare `on` time) asks)
+sortAsks asks = sortBy askOrdering (sortBy (compare `on` (time asks)) asks)
 
-askOrdering a b      | a < b = GT
-                     | otherwise LT
+askOrdering a b      | (price a) < (price b) = GT
+	| otherwise = LT
 
----------------------------------------------------------------------------------
+-------------------------------- -------------------------------------------------
 
 -- STEP 3: Calculate stats (spread and price step)
 
