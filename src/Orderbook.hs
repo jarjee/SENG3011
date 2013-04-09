@@ -10,8 +10,11 @@ module Orderbook (processOrderbook) where
 ------------------------------------------------------------------------------
 
 enterOrder = undefined
+-- add to bid/ask list depending on type
 
 amendOrder = undefined
+-- add to bid/ask 
+-- reprocess orderbook
 
 deleteOrder = undefined
 
