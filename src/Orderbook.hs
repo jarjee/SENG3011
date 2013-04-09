@@ -27,18 +27,14 @@ processOrderbook = undefined
 
 -------------------------------------------------------------------------------
 sortBids :: BidList -> BidList
-sortBids bids = sortBy bidOrdering (sortBy (compare `on` time) bids)
+sortBids bids = sortBy (>)(sortBy (compare `on` time) bids)
 
-bidOrdering a b      | a > b = GT
-                     | otherwise LT
 
 --------------------------------------------------------------------------------
 sortAsks :: AskList -> AskList
 sortAsks = undefined
-sortAsks asks = sortBy askOrdering (sortBy (compare `on` time) asks)
+sortAsks asks = sortBy (<) (sortBy (compare `on` time) asks)
 
-askOrdering a b      | a < b = GT
-                     | otherwise LT
 
 --------------------------------------------------------------------------------
 
