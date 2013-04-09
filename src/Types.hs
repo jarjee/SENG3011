@@ -30,21 +30,29 @@ data OrderBookEntry =
                          date :: Integer,
                          time :: String,
                          recordType :: RecordType,
-                         price :: Float,
-                         volume :: Integer,
-                         undisclosedVolume :: Integer,
-                         value :: Float,
+                         price :: Maybe Float,
+                         volume :: Maybe Integer,
+                         undisclosedVolume :: Maybe Integer,
+                         value :: Maybe Float,
                          qualifiers :: String,
                          transId :: Integer,
-                         bidId :: Maybe Integer,
-                         askId :: Maybe Integer,
-			 bidAsk :: String,
+                         -- bidId :: Maybe Integer, -- When bidAsk is B
+                         -- askId :: Maybe Integer, -- When bidAsk is A
                          entryTime :: String,
                          oldPrice :: Maybe Float,
                          oldVolume :: Maybe Integer,
-                         buyerBrokerId :: Maybe Integer,
-                         sellerBrokerId :: Maybe Integer
+                         -- buyerBrokerId :: Maybe Integer, -- When bidAsk is A
+                         -- sellerBrokerId :: Maybe Integer -- When bidAsk is B
+			 trans :: Maybe TransId
         } deriving (Show, Read, Eq)
+
+data TransId = Buy { bidId :: Integer, sellerBrokerId :: Integer }
+	     | Sell { askId :: Integer, buyerBrokerId :: Integer } deriving (Show, Read, Eq)
+
+makeTrans :: Bool -> Maybe Integer -> Maybe Integer -> Maybe TransId
+makeTrans True (Just x) (Just y) = Just $ Buy x y
+makeTrans False (Just x) (Just y) = Just $ Sell x y
+makeTrans _ _ _ = Nothing
 
 #ifdef CASS
 (.:?) :: (FromField a) => NamedRecord -> B.ByteString -> Parser (Maybe a)
@@ -66,7 +74,7 @@ db = do
 	x <- readF
 	either (print) (doStuff) x
 
-doStuff (h, xs) = undefined
+doStuff (h, xs) = print $ V.toList xs
 
 instance FromNamedRecord OrderBookEntry where
     parseNamedRecord r = do
@@ -74,22 +82,24 @@ instance FromNamedRecord OrderBookEntry where
 	date <- read <$> r.: "Date"
 	time <- r.: "Time"
 	reco <- read <$> r.: "Record Type" 
-	pric <- read <$> r.: "Price" 
-	volu <- read <$> r.: "Volume" 
-	undi <- read <$> r.: "Undisclosed Volume" 
-	valu <- read <$> r.: "Value" 
+	pric <- r.:> "Price" 
+	volu <- r.:> "Volume" 
+	undi <- r.:> "Undisclosed Volume" 
+	valu <- r.:> "Value" 
 	qual <- r.: "Qualifiers"
 	tran <- read <$> r.: "Trans ID" 
 	bid <- r .:> "Bid ID" 
 	ask <- r.:> "Ask ID" 
-	bidAsk <- r.: "Bid/Ask"
+	bidAsk <- r.: "Bid/Ask" :: Parser String
+	let isb = bidAsk == "B"
 	entr <- r.: "Entry Time"
 	oldP <- r.:> "Old Price" 
 	oldV <- r.:> "Old Volume" 
 	buye <- r.:> "Buyer Broker ID" 
 	sell <- r.:> "Seller Broker ID" 		
+	let tranElem = makeTrans isb (if isb then bid else ask) (if isb then sell else buye)
 
-	return $ OrderBookEntry ins date time reco pric volu undi valu qual tran bid ask bidAsk entr oldP oldV buye sell
+	return $ OrderBookEntry ins date time reco pric volu undi valu qual tran entr oldP oldV tranElem
 	where
 		obj .:> key = do
 			n <- obj .:? key
@@ -125,7 +135,10 @@ getTrades handle = do
 	map (orderEntry . split (==',')) records
 
 orderEntry :: [String] -> OrderBookEntry
-orderEntry (inst:dat:tim:recTyp:pri:vol:undisVol:val:qual:trId:bId:aId:ba:entryTim:oldPri:oldVol:buyerBrokId:sellerBrokId:[]) = OrderBookEntry inst (read dat) tim (read recTyp) (read pri) (read vol) (read undisVol) (read val) qual (read trId) (read bId) (read aId) ba entryTim (read oldPri) (read oldVol) (read buyerBrokId) (read sellerBrokId)
+orderEntry (inst:dat:tim:recTyp:pri:vol:undisVol:val:qual:trId:bId:aId:ba:entryTim:oldPri:oldVol:buyerBrokId:sellerBrokId:[]) = OrderBookEntry inst (read dat) tim (read recTyp) (read pri) (read vol) (read undisVol) (read val) qual (read trId) entryTim (read oldPri) (read oldVol) transElem
+	where
+		isb = ba == "b"
+		transElem = makeTrans isb (if isb then return $ read bId else return $ read aId) (if isb then return $ read sellerBrokId else return $ read buyerBrokId)
 orderEntry [] = error "orderEntry cannot take in an empty list! CSV file is not of a valid format!"
 orderEntry _ = error "orderEntry must take in exactly the right number of elements! CSV is invalid!"
 
