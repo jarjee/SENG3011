@@ -1,6 +1,15 @@
 {-# LANGUAGE CPP, OverloadedStrings #-}
 
-module Types (getTrades, csvRep) where
+module Types (
+
+	-- read/write etc
+	getTrades, csvRep,
+
+	-- types needed for Orerbook
+	OrderBookEntry, OrderBook
+
+) where
+
 -- THIS REQUIRES CASSAVA FOR ALL THE SPECIAL FUNCTIONALITY, BY DEFAULT IT IS NOT AN INTELLIGENT PARSER.
 
 --BUILD ALL THE CASS WITH -DCASS
@@ -95,7 +104,7 @@ data OrderBook =
 	OrderBook 	{ 	orders :: ([OrderBookEntry], [OrderBookEntry]),
 				spread :: Float,
 				priceStep :: Float
-			}
+			}deriving (show, Ord, Eq)
 
 data RecordType = AMEND | CANCEL_TRADE | DELETE | ENTER | OFFTR | TRADE deriving (Show, Read, Eq)
 
