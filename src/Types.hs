@@ -23,9 +23,9 @@ data OrderBookEntry =
 
 -- maybe BidList, AskList and OrderBook types...
 data OrderBook = 
-	OrderBook 	{ 	askList :: [OrderBookEntry],
-				bidList :: [OrderBookEntry],
-				spread :: Float
+	OrderBook 	{ 	orders :: ([OrderBookEntry], [OrderBookEntry]),
+				spread :: Float,
+				priceStep :: Float
 			}
 
 data RecordType = AMEND | CANCEL_TRADE | DELETE | ENTER | OFFTR | TRADE deriving (Show, Read, Eq)
