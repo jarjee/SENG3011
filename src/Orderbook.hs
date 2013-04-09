@@ -70,7 +70,7 @@ calculatePriceStep = 1
 
 -- STEP 4: Bring it all together into an OrderBook
 
-processOrderBook :: [OrderBookEntry] -> OrderBook
+-- processOrderBook :: [OrderBookEntry] -> OrderBook
 processOrderbook orders = OrderBook       (sortBidsAsks (splitOrders orders))
                                           calculateSpread (sortBidsAsks (splitOrders orders))
                                           calculatePriceStep (sortBidsAsks (splitOrders orders))
