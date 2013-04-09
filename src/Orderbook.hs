@@ -28,7 +28,7 @@ deleteOrder = undefined
 splitOrders :: [OrderBookEntry] -> ([OrderBookEntry], [OrderBookEntry])
 splitOrders [] = ([], [])
 splitOrders (x : xs)
-                     | (x . bidAsk == "B"    = (x : bid, ask)
+                     | (x . bidAsk == "B")    = (x : bid, ask)
                      | otherwise = (bid, x : ask)
                    where
                      ~(bid, ask) = splitList p xs
