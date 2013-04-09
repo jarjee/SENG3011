@@ -53,7 +53,12 @@ readF = do
 	f <- BL.readFile "../test/test.csv"
 	return $ decodeByName f
 
--- maybe (fail "DICKS") (undefined) (maybe Nothing (parseField) $ HM.lookup key obj) 
+db = do
+	x <- readF
+	either (print) (doStuff) x
+
+doStuff (h, xs) = undefined
+
 instance FromNamedRecord OrderBookEntry where
     parseNamedRecord r = do
 	ins <- r.: "#Instrument"
