@@ -114,7 +114,7 @@ data OrderBook =
 	OrderBook 	{ 	orders :: ([OrderBookEntry], [OrderBookEntry]),
 				spread :: Float,
 				priceStep :: Float
-			}deriving (show, Ord, Eq)
+			}deriving (Show, Ord, Eq)
 
 data RecordType = AMEND | CANCEL_TRADE | DELETE | ENTER | OFFTR | TRADE deriving (Show, Read, Eq)
 
@@ -137,7 +137,7 @@ getTrades handle = do
 orderEntry :: [String] -> OrderBookEntry
 orderEntry (inst:dat:tim:recTyp:pri:vol:undisVol:val:qual:trId:bId:aId:ba:entryTim:oldPri:oldVol:buyerBrokId:sellerBrokId:[]) = OrderBookEntry inst (read dat) tim (read recTyp) (read pri) (read vol) (read undisVol) (read val) qual (read trId) entryTim (read oldPri) (read oldVol) transElem
 	where
-		isb = ba == "b"
+		isb = ba == "B"
 		transElem = makeTrans isb (if isb then return $ read bId else return $ read aId) (if isb then return $ read sellerBrokId else return $ read buyerBrokId)
 orderEntry [] = error "orderEntry cannot take in an empty list! CSV file is not of a valid format!"
 orderEntry _ = error "orderEntry must take in exactly the right number of elements! CSV is invalid!"
