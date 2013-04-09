@@ -114,7 +114,7 @@ data OrderBook =
 	OrderBook 	{ 	orders :: ([OrderBookEntry], [OrderBookEntry]),
 				spread :: Float,
 				priceStep :: Float
-			}deriving (Show, Ord, Eq)
+			}deriving (Show, Eq)
 
 data RecordType = AMEND | CANCEL_TRADE | DELETE | ENTER | OFFTR | TRADE deriving (Show, Read, Eq)
 
