@@ -32,9 +32,9 @@ data OrderBookEntry =
 			 bidAsk :: String,
                          entryTime :: String,
                          oldPrice :: Maybe Float,
-                         oldVolume :: Integer,
-                         buyerBrokerId :: Integer,
-                         sellerBrokerId :: Integer
+                         oldVolume :: Maybe Integer,
+                         buyerBrokerId :: Maybe Integer,
+                         sellerBrokerId :: Maybe Integer
         } deriving (Show, Read, Eq)
 
 #ifdef CASS
@@ -47,6 +47,11 @@ obj .:? key = case HM.lookup key obj of
 				Just <$> parseField (v)
 			else
 				pure Nothing
+
+readF :: IO (Either String (Header, V.Vector OrderBookEntry))
+readF = do
+	f <- BL.readFile "../test/test.csv"
+	return $ decodeByName f
 
 -- maybe (fail "DICKS") (undefined) (maybe Nothing (parseField) $ HM.lookup key obj) 
 instance FromNamedRecord OrderBookEntry where
@@ -66,9 +71,9 @@ instance FromNamedRecord OrderBookEntry where
 	bidAsk <- r.: "Bid/Ask"
 	entr <- r.: "Entry Time"
 	oldP <- r.:> "Old Price" 
-	oldV <- read <$> r.: "Old Volume" 
-	buye <- read <$> r.: "Buyer Broker ID" 
-	sell <- read <$> r.: "Seller Broker ID" 		
+	oldV <- r.:> "Old Volume" 
+	buye <- r.:> "Buyer Broker ID" 
+	sell <- r.:> "Seller Broker ID" 		
 
 	return $ OrderBookEntry ins date time reco pric volu undi valu qual tran bid ask bidAsk entr oldP oldV buye sell
 	where
