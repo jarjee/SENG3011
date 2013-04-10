@@ -14,6 +14,7 @@ import Data.List
 -- add to list of all orders
 -- process orders
 
+-- maybe should find given ordr from id in order book, delete old order and add new order and resort
 -- amendOrder :: OrderBookEntry -> Float -> OrderBookEntry | OrderBookEntry -> Integer -> OrderBookEntry
 amendOrder = undefined
 -- add to order list
