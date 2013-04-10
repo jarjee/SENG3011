@@ -5,8 +5,8 @@ module Types (
 	-- read/write etc
 	getTrades, csvRep,
 
-	-- types needed for Orerbook
-	OrderBookEntry, OrderBook
+	-- types needed for Orderbook
+	OrderBookEntry, OrderBook, time, price
 
 ) where
 
@@ -47,11 +47,11 @@ data OrderBookEntry =
         } deriving (Show, Read, Eq)
 
 data TransId = Buy { bidId :: Integer, sellerBrokerId :: Integer }
-	     | Sell { askId :: Integer, buyerBrokerId :: Integer } deriving (Show, Read, Eq)
+	     | Ask { askId :: Integer, buyerBrokerId :: Integer } deriving (Show, Read, Eq)
 
 makeTrans :: Bool -> Maybe Integer -> Maybe Integer -> Maybe TransId
 makeTrans True (Just x) (Just y) = Just $ Buy x y
-makeTrans False (Just x) (Just y) = Just $ Sell x y
+makeTrans False (Just x) (Just y) = Just $ Ask x y
 makeTrans _ _ _ = Nothing
 
 #ifdef CASS
