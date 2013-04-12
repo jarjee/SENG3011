@@ -25,6 +25,12 @@ import qualified Data.HashMap.Lazy as HM
 #endif
 
 -- types go here
+data OrderBook = 
+	OrderBook 	{ 	orders :: ([OrderBookEntry], [OrderBookEntry]),
+				spread :: Float,
+				priceStep :: Float
+			}deriving (Show, Eq)
+
 data OrderBookEntry = 
         OrderBookEntry { instrument :: String,
                          date :: Integer,
@@ -108,13 +114,6 @@ instance FromNamedRecord OrderBookEntry where
 #else
 
 #endif
-
--- maybe BidList, AskList and OrderBook types...
-data OrderBook = 
-	OrderBook 	{ 	orders :: ([OrderBookEntry], [OrderBookEntry]),
-				spread :: Float,
-				priceStep :: Float
-			}deriving (Show, Eq)
 
 data RecordType = AMEND | CANCEL_TRADE | DELETE | ENTER | OFFTR | TRADE deriving (Show, Read, Eq)
 
