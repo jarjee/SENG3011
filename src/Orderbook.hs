@@ -2,27 +2,82 @@ module Orderbook (processOrderbook, splitOrders) where
 
 import Types
 import Data.List
+import Data.Function
+
+-----------------------------------------------------------------------------
+------------------- IMPORTANT NOTES FOR THIS MODULE -------------------------
+-----------------------------------------------------------------------------
 
 
--- enter :: someData - > Order   -- submitOrder
--- amend :: Int -> Order -> Order    -- amendOrder = ammendVol | amendPrice
--- deleteOrder :: Order -> Nothing --not Haskell nothing just something that is nothing, I'm a monkey not a Guru remember! :P
 
-------------------------------------------------------------------------------
+-----------------------------------------------------------------------------
+------------------- AMMEND AN ORDER BOOK ENTRY ------------------------------
+-----------------------------------------------------------------------------
 
--- enterOrder = OrderBookEntry (a million things)
--- add to list of all orders
--- process orders
+-- TYPE 1: price
 
--- maybe should find given ordr from id in order book, delete old order and add new order and resort
--- amendOrder :: OrderBookEntry -> Float -> OrderBookEntry | OrderBookEntry -> Integer -> OrderBookEntry
-amendOrder = undefined
--- add to order list
--- process orderbook
+-- ammendOrderPrice :: OrderBook -> Integer -> Float -> OrderBook
+amendOrderPrice orderbook orderID newPrice  = undefined
+
+-- runs compare over each order in the bid and ask lists
+findVolOrder orderbook price orderID = do
+										map (comparePrice price orderID) (fst (orderbook.orders) )
+										map (comparePrice price orderID) (snd (orderbook.orders) )
+
+-- compare order id to order to see if its the one				
+comparePrice price orderID order = if (order . transID == orderID)
+									then ammendPrice order price	
+									else order
+							
+-- set old price to current price, set price to new price
+ammendPrice order newPrice = do
+								(order . oldPrice) = (order. price)
+								(order . price) = newPrice
+
+--------------------------------------------------------------------------------
+
+-- TYPE 2: volume									
+
+-- ammendOrderVolume :: OrderBook -> Integer -> Integer -> OrderBook
+amendOrderVolume orderbook orderID newVol = undefined
+
+-- runs compare over each order in the bid and ask lists
+findVolOrder orderbook vol orderID = do
+										map (compareVol vol orderID) (fst (orderbook.orders) )
+										map (compareVol vol orderID) (snd (orderbook.orders) )
+
+-- compare order id to order to see if its the one				
+compareVol vol orderID order = if (order . transID == orderID)
+								then ammendVol order vol	
+								else order
+
+-- set old volume to current volume, set volume to new volume
+ammendVol order newVol = do
+							(order . oldVolume) = (order. volume)
+							(order . volume) = newVol
+
+								
+--------------------------------------------------------------------------------
+--------------FUNCTIONS COMMON TO AMMENDVOLUME AND AMMENDPRICE------------------
+--------------------------------------------------------------------------------									
+																	
+-- sort ammended orderbook
+sortNewOrder orderbook = processOrderBook (fst (orderbook . orders) ++ snd (orderbook . orders) )
+
+-------------------------------------------------------------------------------------
+---------------------------- DELETE AN ORDER BOOK ENTRY -----------------------------
+-------------------------------------------------------------------------------------
 
 deleteOrder = undefined
--- remove from list/orderbook
--- do nothing
+-- find orderID in orderbook
+-- set all values except id to nothingness
+
+
+
+
+
+
+
 
 
 ------------------------------------------------------------------------------
