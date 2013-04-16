@@ -6,7 +6,7 @@ module Types (
 	getTrades, csvRep,
 
 	-- types needed for Orderbook
-	OrderBookEntry, OrderBook, TransId, TradeLog,
+	OrderBookEntry, OrderBook(OrderBook), TransId(Bid,Ask), TradeLog,
 	time, price, volume, transId, orders, oldPrice, oldVolume, trans
 
 ) where
@@ -84,9 +84,9 @@ readF = do
 
 db = do
 	x <- readF
-	either (print) (doStuff) x
+	either (undefined) (doStuff) x
 
-doStuff (h, xs) = print $ V.toList xs
+doStuff (h, xs) = return $ V.toList xs
 
 instance FromNamedRecord OrderBookEntry where
     parseNamedRecord r = do

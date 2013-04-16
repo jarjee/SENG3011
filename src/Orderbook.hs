@@ -26,8 +26,8 @@ amendOrderPrice orderbook orderID newPrice  = undefined
 
 -- runs compare over each order in the bid and ask lists
 findPriceOrder orderbook price orderID = do
-										map (comparePrice price orderID) (fst (orderbook.orders) )
-										map (comparePrice price orderID) (snd (orderbook.orders) )
+	map (comparePrice price orderID) (fst (orderbook.orders) )
+	map (comparePrice price orderID) (snd (orderbook.orders) )
 
 -- compare order id to order to see if its the one				
 comparePrice price orderID order = if ((transId order) == orderID)
@@ -80,7 +80,7 @@ sortNewOrder orderbook = processOrderbook (fst (orderbook . orders) ++ snd (orde
 clearOrderBook orderId orderbook = deleteOrder orderId (snd (orders (deleteOrder orderId (fst (orders orderbook))) ) )
 
 deleteOrder :: Integer -> [OrderBookEntry] -> [OrderBookEntry]
-deleteOrder orderId orders = filter (/o (transId o) /= orderId) orders
+deleteOrder orderId orders = filter ((/= orderId) . transId) orders
 
 ------------------------------------------------------------------------------
 -------- PROCESSING OF ORDER BOOK ENTRIES TO FORM A SORTED ORDERBOOK ---------
@@ -94,12 +94,11 @@ splitOrders (x : xs)
                      | isBidAsk (x trans) = (x : bid, ask)
                      | otherwise = (bid, x : ask)
                    where
-                     ~(bid, ask) = splitOrders xs
+                     (bid, ask) = splitOrders xs
 	
-isBidAsk :: TransId -> Bool	
-isBidAsk trans
-				|(Bid _ _) = True
-				|(Ask _ _) = False
+isBidAsk :: TransId -> Bool
+isBidAsk (Bid _ _) = True
+isBidAsk (Ask _ _) = False
 
 -------------------------------------------------------------------------------
 
