@@ -15,9 +15,6 @@ import Data.Function
 
 -- order tuple goes (bids, asks)
 
-
-
-
 -----------------------------------------------------------------------------
 ------------------- AMMEND AN ORDER BOOK ENTRY ------------------------------
 -----------------------------------------------------------------------------
@@ -80,17 +77,10 @@ sortNewOrder orderbook = processOrderbook (fst (orderbook . orders) ++ snd (orde
 ---------------------------- DELETE AN ORDER BOOK ENTRY -----------------------------
 -------------------------------------------------------------------------------------
 
-deleteOrder = undefined
--- find orderID in orderbook
--- set all values except id to nothingness
+clearOrderBook orderId orderbook = deleteOrder orderId (snd (orders (deleteOrder orderId (fst (orders orderbook))) ) )
 
-
-
-
-
-
-
-
+deleteOrder :: Integer -> [OrderBookEntry] -> [OrderBookEntry]
+deleteOrder orderId orders = filter (/o (transId o) /= orderId) orders
 
 ------------------------------------------------------------------------------
 -------- PROCESSING OF ORDER BOOK ENTRIES TO FORM A SORTED ORDERBOOK ---------

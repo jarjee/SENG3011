@@ -4,17 +4,29 @@ module Trader (generateTrades, Strategy(..)) where
 import Types
 import Orderbook
 
+-----------------------------------------------------------------------------
+------------------- IMPORTANT NOTES FOR THIS MODULE -------------------------
+-----------------------------------------------------------------------------
+
+-- Three functions must be called here to succesfully generate one trade
+-- 1. generateTrades
+-- 2. pergeOrderBook
+-- 3. newSpread
+-- eventually returning an up-to-date orderbook
+-- call this series recursively for full trading
+
+-- have introduced a new data type which could be accumulated into a list of trades
+-- for reporting purposes
+
+-------------------------------------------------------------------------------
+
 data TradeStats =
 				TradeStats { 	trade :: (OrderBookEntry, OrderBookEntry),
 								price :: Float,
-								volume :: Integer
+								volume :: Integer,
+								bidID :: Integer,
+								askID :: Integer
 							} deriving (Show, Eq)
-
-							
-generateTrades :: OrderBook -> TradeLog
-generateTrades orderbook = makeTrade (recordTradeStats orderbook) orderbook
-
-
 
 ------------------------------STEP 1: GET TRADE DETAILS---------------------------------
 
@@ -40,9 +52,14 @@ earliestOrder (bid, ask)
 						|otherwise = (time ask)
 							
 recordTradeStats :: OrderBook -> TradeStats		
-recordTradeStats obook = TradeStats (getBestOrderPair obook) (getPrice obook) (getVolume (getBestOrderPair obook))
+recordTradeStats obook = TradeStats (getBestOrderPair obook) (getPrice obook) 
+										(getVolume (getBestOrderPair obook)) (fst (getBestOrderPair obook))
+											(snd (getBestOrderPair obook))
 
 ------------------------------STEP 2: UPDATE VOLUME VALUES----------------------------
+
+generateTrades :: OrderBook -> TradeLog
+generateTrades orderbook = makeTrade (recordTradeStats orderbook) orderbook
 
 makeTrade :: TradeStats -> OrderBook -> OrderBook
 makeTrade tstats obook = updateBidList tstats (updateAskList tstats obook)
@@ -55,26 +72,19 @@ updateBidList tstats obook = (head (snd (order obook))) {volume = (volume - (vol
 
 ------------------------------STEP 3: DELETE USED ORDERS------------------------------------
 				
-				
+pergeOrderBook :: OrderBook -> OrderBook
+pergeOrderBook obook = pergeOrders (snd orders (pergeOrders (fst (orders obook)) ) )
+
+pergeOrders :: [OrderBookEntry] -> [OrderBookEntry]
+pergeOrders os = filter (\o -> (volume o) > 0) os
 				
 ------------------------------STEP : DETERMINE NEW SPREAD------------------------------------
 				
 newSpread :: OrderBook -> OrderBook
 newSpread orderbook = orderbook {spread = Orderbook.calculateSpread (orders orderbook)}
 
------------------------------STEP 5: UPDATE CLIENT BANK--------------------------------------
+----------------------------------------------------------------------------------------------
 
-
-
-
-
-						
-						
-						
-						
-						
-						
-						
 --Whatever you want, I've just put this in place so it can compile
 
 data Strategy = TradeBadly Int | TradeLimit Int Int deriving (Show, Eq, Read)
