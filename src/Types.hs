@@ -6,7 +6,8 @@ module Types (
 	getTrades, csvRep,
 
 	-- types needed for Orderbook
-	OrderBookEntry, OrderBook, time, price
+	OrderBookEntry, OrderBook, TransId, TradeLog,
+	time, price, volume, transId, orders, oldPrice, oldVolume, trans
 
 ) where
 
@@ -26,11 +27,16 @@ import qualified Data.HashMap.Lazy as HM
 
 -- types go here
 data OrderBook = 
-	OrderBook 	{ 	orders :: ([OrderBookEntry], [OrderBookEntry]),
-				spread :: Float,
-				priceStep :: Float
-			}deriving (Show, Eq)
+				OrderBook 	{ 	orders :: ([OrderBookEntry], [OrderBookEntry]),
+								spread :: Float,
+								priceStep :: Float
+							}deriving (Show, Eq)
 
+-- although this seems pointless at this stage we may need more info later							
+data TradeLog = 
+				TradeLog 	{ 	trades :: ([OrderBookEntry], [OrderBookEntry])
+							}deriving (Show, Eq)							
+							
 data OrderBookEntry = 
         OrderBookEntry { instrument :: String,
                          date :: Integer,
@@ -49,14 +55,14 @@ data OrderBookEntry =
                          oldVolume :: Maybe Integer,
                          -- buyerBrokerId :: Maybe Integer, -- When bidAsk is A
                          -- sellerBrokerId :: Maybe Integer -- When bidAsk is B
-			 trans :: Maybe TransId
+						trans :: Maybe TransId
         } deriving (Show, Read, Eq)
 
-data TransId = Buy { bidId :: Integer, sellerBrokerId :: Integer }
-	     | Ask { askId :: Integer, buyerBrokerId :: Integer } deriving (Show, Read, Eq)
+data TransId = 	Bid { bidId :: Integer, sellerBrokerId :: Integer }
+				| Ask { askId :: Integer, buyerBrokerId :: Integer } deriving (Show, Read, Eq)
 
 makeTrans :: Bool -> Maybe Integer -> Maybe Integer -> Maybe TransId
-makeTrans True (Just x) (Just y) = Just $ Buy x y
+makeTrans True (Just x) (Just y) = Just $ Bid x y
 makeTrans False (Just x) (Just y) = Just $ Ask x y
 makeTrans _ _ _ = Nothing
 
