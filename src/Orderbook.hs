@@ -3,6 +3,9 @@ module Orderbook (processOrderbook, amendOrderPrice, amendOrderVolume) where
 import Types
 import Data.List
 import Data.Function
+import Data.Functor
+import Control.Applicative
+import Data.Maybe
 -----------------------------------------------------------------------------
 ------------------- IMPORTANT NOTES FOR THIS MODULE -------------------------
 -----------------------------------------------------------------------------
@@ -130,8 +133,11 @@ askOrderingTime a b   	| (time a) < (time b) = GT
 -- STEP 3: Calculate stats (spread and price step)
 
 calculateSpread :: ([OrderBookEntry], [OrderBookEntry]) -> Float
-calculateSpread orders = abs ( ( price (head (fst orders) ) ) 
-                     - ( price (head (snd orders) ) ) )
+calculateSpread orders
+	| ((-) <$> (price bid) <*> (price ask)) == Nothing = 0
+	| otherwise = abs(fromJust $ (-) <$> (price bid) <*> (price ask))
+	where bid = head $ fst orders
+	      ask = head $ snd orders
 
 calculatePriceStep :: ([OrderBookEntry], [OrderBookEntry]) -> Float
 calculatePriceStep = undefined
