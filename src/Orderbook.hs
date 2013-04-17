@@ -26,8 +26,8 @@ amendOrderPrice orderbook orderID newPrice  = undefined
 
 -- runs compare over each order in the bid and ask lists
 findPriceOrder orderbook price orderID = do
-	map (comparePrice price orderID) (fst (orderbook.orders) )
-	map (comparePrice price orderID) (snd (orderbook.orders) )
+	map (comparePrice price orderID) (fst (orders orderbook) )
+	map (comparePrice price orderID) (snd (orders orderbook) )
 
 -- compare order id to order to see if its the one				
 comparePrice price orderID order = if ((transId order) == orderID)
@@ -35,7 +35,7 @@ comparePrice price orderID order = if ((transId order) == orderID)
 									else order
 							
 -- set old price to current price, set price to new price
-ammendPrice order newPrice = changePrice order (changeNewPrice order newPrice)
+ammendPrice order newPrice = changeNewPrice (changePrice order) newPrice
 								
 changePrice order = order {oldPrice = (price order)}
 								
@@ -50,8 +50,8 @@ amendOrderVolume orderbook orderID newVol = undefined
 
 -- runs compare over each order in the bid and ask lists
 findVolOrder orderbook vol orderID = do
-										map (compareVol vol orderID) (fst (orderbook.orders) )
-										map (compareVol vol orderID) (snd (orderbook.orders) )
+										map (compareVol vol orderID) (fst (orders orderbook) )
+										map (compareVol vol orderID) (snd (orders orderbook) )
 
 -- compare order id to order to see if its the one				
 compareVol vol orderID order = if ((transId order) == orderID)
@@ -59,7 +59,7 @@ compareVol vol orderID order = if ((transId order) == orderID)
 								else order
 
 -- set old volume to current volume, set volume to new volume
-ammendVol order newVol = changeVol order (changeNewVol newVol order)
+ammendVol order newVol = changeNewVol (changeVol  order) newVol
 
 changeVol order = order {oldVolume = (volume order)}
 							
@@ -71,16 +71,16 @@ changeNewVol order newVol = order {volume = newVol}
 --------------------------------------------------------------------------------									
 																	
 -- sort ammended orderbook
-sortNewOrder orderbook = processOrderbook (fst (orderbook . orders) ++ snd (orderbook . orders) )
+sortNewOrder orderbook = processOrderbook (fst (orders orderbook) ++ snd (orders orderbook) )
 
 -------------------------------------------------------------------------------------
 ---------------------------- DELETE AN ORDER BOOK ENTRY -----------------------------
 -------------------------------------------------------------------------------------
 
-clearOrderBook orderId orderbook = deleteOrder orderId (snd (orders (deleteOrder orderId (fst (orders orderbook))) ) )
+--clearOrderBook orderId orderbook = deleteOrder orderId (snd (orders (deleteOrder orderId (fst (orders orderbook))) ) )
 
-deleteOrder :: Integer -> [OrderBookEntry] -> [OrderBookEntry]
-deleteOrder orderId orders = filter ((/= orderId) . transId) orders
+--deleteOrder :: Integer -> [OrderBookEntry] -> [OrderBookEntry]
+--deleteOrder orderId orders = filter ((/= orderId) . transId) orders
 
 ------------------------------------------------------------------------------
 -------- PROCESSING OF ORDER BOOK ENTRIES TO FORM A SORTED ORDERBOOK ---------
@@ -91,7 +91,7 @@ deleteOrder orderId orders = filter ((/= orderId) . transId) orders
 splitOrders :: [OrderBookEntry] -> ([OrderBookEntry], [OrderBookEntry])
 splitOrders [] = ([], [])
 splitOrders (x : xs)
-                     | isBidAsk (x trans) = (x : bid, ask)
+                     | isBidAsk (trans x) = (x : bid, ask)
                      | otherwise = (bid, x : ask)
                    where
                      (bid, ask) = splitOrders xs
@@ -109,27 +109,32 @@ sortBidsAsks orders = ( sortBids (fst orders),
                      					sortAsks (snd orders) )
 
 sortBids :: [OrderBookEntry] -> [OrderBookEntry]
-sortBids bids = sortBy bidOrdering (sortBy (compare `on` (time bids)) bids)
+sortBids bids = sortBy bidOrderingPrice (sortBy bidOrderingTime bids)
 
-bidOrdering a b      | (price a) > (price b) = GT
-                     | otherwise = LT
-
+bidOrderingPrice a b    | (price a) > (price b) = GT
+						| otherwise = LT
+bidOrderingTime a b   	| (time a) < (time b) = GT
+						| otherwise = LT
+						
+						
 sortAsks :: [OrderBookEntry] -> [OrderBookEntry]
-sortAsks asks = sortBy askOrdering (sortBy (compare `on` (time asks)) asks)
+sortAsks asks = sortBy askOrderingPrice (sortBy askOrderingTime asks) 
 
-askOrdering a b     | (price a) < (price b) = GT
-					| otherwise = LT
+askOrderingPrice a b    | (price a) < (price b) = GT
+						| otherwise = LT
+askOrderingTime a b   	| (time a) < (time b) = GT
+						| otherwise = LT
 
 -------------------------------- -------------------------------------------------
 
 -- STEP 3: Calculate stats (spread and price step)
 
 calculateSpread :: ([OrderBookEntry], [OrderBookEntry]) -> Float
-calculateSpread orders = abs ( ( (head (fst orders) ) . price ) 
-                     - ( (head (snd orders) ) . price ) )
+calculateSpread orders = abs ( ( price (head (fst orders) ) ) 
+                     - ( price (head (snd orders) ) ) )
 
 calculatePriceStep :: ([OrderBookEntry], [OrderBookEntry]) -> Float
-calculatePriceStep = 1
+calculatePriceStep = undefined
 -- still not 100% sure what this step business is
 
 ---------------------------------------------------------------------------------
@@ -138,6 +143,6 @@ calculatePriceStep = 1
 
 -- processOrderBook :: [OrderBookEntry] -> OrderBook
 processOrderbook orders = OrderBook (sortBidsAsks (splitOrders orders))
-										calculateSpread (sortBidsAsks (splitOrders orders))
-											calculatePriceStep (sortBidsAsks (splitOrders orders))
+										(calculateSpread (sortBidsAsks (splitOrders orders)))
+											(calculatePriceStep (sortBidsAsks (splitOrders orders)))
 ------------------------------------------------------------------------------------
