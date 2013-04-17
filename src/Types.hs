@@ -55,7 +55,7 @@ data OrderBookEntry =
                          oldVolume :: Maybe Integer,
                          -- buyerBrokerId :: Maybe Integer, -- When bidAsk is A
                          -- sellerBrokerId :: Maybe Integer -- When bidAsk is B
-						trans :: Maybe TransId
+			trans :: Maybe TransId
         } deriving (Show, Read, Eq)
 
 data TransId = 	Bid { bidId :: Integer, sellerBrokerId :: Integer }

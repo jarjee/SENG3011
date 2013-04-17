@@ -3,7 +3,6 @@ module Orderbook (processOrderbook, amendOrderPrice, amendOrderVolume) where
 import Types
 import Data.List
 import Data.Function
-
 -----------------------------------------------------------------------------
 ------------------- IMPORTANT NOTES FOR THIS MODULE -------------------------
 -----------------------------------------------------------------------------
@@ -91,14 +90,15 @@ sortNewOrder orderbook = processOrderbook (fst (orders orderbook) ++ snd (orders
 splitOrders :: [OrderBookEntry] -> ([OrderBookEntry], [OrderBookEntry])
 splitOrders [] = ([], [])
 splitOrders (x : xs)
-                     | isBidAsk (trans x) = (x : bid, ask)
-                     | otherwise = (bid, x : ask)
-                   where
-                     (bid, ask) = splitOrders xs
+	|(fmap (isBid) $ trans x) == (Just True) = (x : bid, ask)
+	|(fmap (isBid) $ trans x) == (Just False) = (bid, x : ask)
+	|otherwise = (bid, ask)
+             where
+               (bid, ask) = splitOrders xs
 	
-isBidAsk :: TransId -> Bool
-isBidAsk (Bid _ _) = True
-isBidAsk (Ask _ _) = False
+isBid :: TransId -> Bool
+isBid (Bid _ _) = True
+isBid (Ask _ _) = False
 
 -------------------------------------------------------------------------------
 
