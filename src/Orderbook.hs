@@ -1,4 +1,4 @@
-module Orderbook (processOrderbook, amendOrderPrice, amendOrderVolume) where
+module Orderbook (processOrderbook, amendOrderPrice, amendOrderVolume, calculateSpread) where
 
 import Types
 import Data.List
@@ -6,6 +6,8 @@ import Data.Function
 import Data.Functor
 import Control.Applicative
 import Data.Maybe
+
+
 -----------------------------------------------------------------------------
 ------------------- IMPORTANT NOTES FOR THIS MODULE -------------------------
 -----------------------------------------------------------------------------
