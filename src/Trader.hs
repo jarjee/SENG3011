@@ -22,66 +22,69 @@ import Orderbook
 
 data TradeStats =
 				TradeStats { 	trade :: (OrderBookEntry, OrderBookEntry),
-								price :: Float,
-								volume :: Integer,
+								tradePrice :: Float,
+								tradeVolume :: Integer,
 								bidID :: Integer,
 								askID :: Integer
 							} deriving (Show, Eq)
 
 ------------------------------STEP 1: GET TRADE DETAILS---------------------------------
 
-getBestOrderPair :: orderbook -> (OrderBookEntry, OrderBookEntry)
+--getBestOrderPair :: orderbook -> (OrderBookEntry, OrderBookEntry)
 getBestOrderPair obook = (head (fst (orders obook)), head (snd (orders obook)) )
 
-getVolume :: (OrderBookEntry, OrderBookEntry) -> Integer
+--getVolume :: (OrderBookEntry, OrderBookEntry) -> Integer
 getVolume (bid, ask)
 		|((volume bid) < (volume ask)) = (volume bid)
 		|((volume ask) < (volume bid)) = (volume ask)
 		|otherwise = (volume bid)
 
-getPrice :: OrderBook -> Float
-getPrice obook = if (spread obook) <= 0
-							then 
-								if (spread orderbook) == 0
-								then (price (fst (getBestOrderPair obook)) )
-									else earliestOrder (getBestOrderPair obook)
+--getPrice :: OrderBook -> Float
+getPrice obook  
+		| ((spread obook) == 0) = (price (fst (getBestOrderPair obook)) )
+		| ((spread obook) < 0) = price (earliestOrder (getBestOrderPair obook))
+		| otherwise = doOtherThing
+		
+doOtherThing = undefined
 												
-earliestOrder :: (OrderBookEntry, OrderBookEntry) -> Float
+--earliestOrder :: (OrderBookEntry, OrderBookEntry) -> Float
 earliestOrder (bid, ask)
-						|((time bid) < (time ask)) = (time bid)
-						|otherwise = (time ask)
+		|((time bid) < (time ask)) = bid
+		|otherwise = ask
 							
-recordTradeStats :: OrderBook -> TradeStats		
-recordTradeStats obook = TradeStats (getBestOrderPair obook) (getPrice obook) 
-										(getVolume (getBestOrderPair obook)) (fst (getBestOrderPair obook))
-											(snd (getBestOrderPair obook))
+--recordTradeStats :: OrderBook -> TradeStats		
+recordTradeStats obook = TradeStats (getBestOrderPair obook) 
+										(getPrice obook) 
+											(getVolume (getBestOrderPair obook)) 
+												(fst (getBestOrderPair obook))
+													(snd (getBestOrderPair obook))
 
 ------------------------------STEP 2: UPDATE VOLUME VALUES----------------------------
 
-generateTrades :: OrderBook -> TradeLog
+--generateTrades :: OrderBook -> TradeLog
 generateTrades orderbook = makeTrade (recordTradeStats orderbook) orderbook
 
-makeTrade :: TradeStats -> OrderBook -> OrderBook
+--makeTrade :: TradeStats -> OrderBook -> OrderBook
 makeTrade tstats obook = updateBidList tstats (updateAskList tstats obook)
 
-updateBidList :: TradeStats -> OrderBook -> OrderBook
-updateBidList tstats obook = (head (fst (order obook))) {volume = (volume - (volume tstats)}
+--updateBidList :: TradeStats -> OrderBook -> OrderBook
+updateBidList tstats obook = (head (fst (orders obook))) {volume = (volume - (tradeVolume tstats))}
 
-updateAskList :: TradeStats -> OrderBook -> OrderBook
-updateBidList tstats obook = (head (snd (order obook))) {volume = (volume - (volume tstats)}
+--updateAskList :: TradeStats -> OrderBook -> OrderBook
+updateAskList tstats obook = (head (snd (orders obook))) {volume = (volume - (tradeVolume tstats))}
 
 ------------------------------STEP 3: DELETE USED ORDERS------------------------------------
 				
-pergeOrderBook :: OrderBook -> OrderBook
-pergeOrderBook obook = pergeOrders (snd orders (pergeOrders (fst (orders obook)) ) )
+--pergeOrderBook :: OrderBook -> (OrderBookEntry, OrderBookEntry)
+pergeOrderBook obook = (pergeOrders (fst (orders obook)), pergeOrders (snd (orders obook)))
 
-pergeOrders :: [OrderBookEntry] -> [OrderBookEntry]
-pergeOrders os = filter (\o -> (volume o) > 0) os
+--pergeOrders :: [OrderBookEntry] -> [OrderBookEntry]
+pergeOrders os = filter (\o -> (volume o) == 0) os
 				
 ------------------------------STEP : DETERMINE NEW SPREAD------------------------------------
 				
-newSpread :: OrderBook -> OrderBook
-newSpread orderbook = orderbook {spread = Orderbook.calculateSpread (orders orderbook)}
+--newSpread :: OrderBook -> OrderBook
+--newSpread orderbook = orderbook {spread = calculateSpread (orders orderbook)}
 
 ----------------------------------------------------------------------------------------------
 

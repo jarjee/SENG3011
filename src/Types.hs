@@ -6,7 +6,8 @@ module Types (
 
     -- types needed for Orderbook
     OrderBookEntry, OrderBook(OrderBook), TransId(Bid,Ask), TradeLog,
-    time, price, volume, transId, orders, oldPrice, oldVolume, trans
+    time, price, volume, transId, orders, oldPrice, oldVolume, trans,
+	spread
 
 ) where
 
