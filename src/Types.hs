@@ -2,7 +2,7 @@
 module Types (
 
     -- read/write etc
-    getTrades, csvRep,
+    getTrades,
 
     -- types needed for Orderbook
     OrderBookEntry, OrderBook(OrderBook), TransId(Bid,Ask), TradeLog,
@@ -82,13 +82,13 @@ readF = do
     f <- BL.readFile "../test/test.csv"
     return $ decodeByName f
 
-writeF :: ToNamedRecord a => String -> (Header, V.Vector a) -> IO()
+writeF :: String -> (Header, V.Vector OrderBookEntry) -> IO()
 writeF location (head, elements) = do
 	BL.writeFile location (encodeByName head elements)	
 
 db = do
     x <- readF
-    either (undefined) (doStuff) x
+    either (undefined) (writeF "../test/output.csv") x
 
 doStuff (h, xs) = return $ V.toList xs
 
@@ -121,8 +121,11 @@ instance FromNamedRecord OrderBookEntry where
             n <- obj .:? key
             return $ read <$> n
 
-#else
+instance ToNamedRecord OrderBookEntry where
+	toNamedRecord (OrderBookEntry inst dat tim recTyp pri vol undisVol val qual trId entryTim oldPri oldVol transElem) = namedRecord ["#Instrument" .= inst, "Date" .= show dat, "Time" .= tim, "Record Type" .= show recTyp, "Price" .= showMaybe pri, "Volume" .= showMaybe vol, "Undisclosed Volume" .= showMaybe undisVol, "Value" .= showMaybe val, "Qualifiers" .= qual, "Trans ID" .= show trId]
 
+
+showMaybe b = maybe "" (show) b
 #endif
 
 data RecordType = AMEND | CANCEL_TRADE | DELETE | ENTER | OFFTR | TRADE deriving (Show, Read, Eq)
@@ -150,8 +153,3 @@ orderEntry (inst:dat:tim:recTyp:pri:vol:undisVol:val:qual:trId:bId:aId:ba:entryT
         transElem = makeTrans isb (if isb then return $ read bId else return $ read aId) (if isb then return $ read sellerBrokId else return $ read buyerBrokId)
 orderEntry [] = error "orderEntry cannot take in an empty list! CSV file is not of a valid format!"
 orderEntry _ = error "orderEntry must take in exactly the right number of elements! CSV is invalid!"
-
---Final Output
-csvRep :: [OrderBookEntry] -> String
-csvRep entries = undefined
-
