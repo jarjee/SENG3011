@@ -2,7 +2,7 @@
 module Types (
 
     -- read/write etc
-    getTrades, db,
+    getTrades, readF, writeF, RecordType(TRADE), recordType,
 
     -- types needed for Orderbook
     OrderBookEntry, OrderBook(OrderBook), TransId(Bid,Ask), TradeLog,
@@ -75,9 +75,9 @@ obj .:? key = case HM.lookup key obj of
             else
                 pure Nothing
 
-readF :: IO (Either String (Header, V.Vector OrderBookEntry))
-readF = do
-    f <- BL.readFile "../test/test.csv"
+readF :: String -> IO (Either String (Header, V.Vector OrderBookEntry))
+readF name = do
+    f <- BL.readFile name
     return $ decodeByName f
 
 writeF :: String -> (Header, V.Vector OrderBookEntry) -> IO()
@@ -85,7 +85,7 @@ writeF location (head, elements) = do
 	BL.writeFile location (encodeByName head elements)	
 
 db = do
-    x <- readF
+    x <- readF "../test/input.csv"
     either (undefined) (writeF "../test/output.csv") x
 
 doStuff (h, xs) = return $ V.toList xs
