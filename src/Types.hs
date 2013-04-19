@@ -2,7 +2,7 @@
 module Types (
 
     -- read/write etc
-    getTrades,
+    getTrades, db,
 
     -- types needed for Orderbook
     OrderBookEntry, OrderBook(OrderBook), TransId(Bid,Ask), TradeLog,
@@ -13,7 +13,6 @@ module Types (
 -- THIS REQUIRES CASSAVA FOR ALL THE SPECIAL FUNCTIONALITY, BY DEFAULT IT IS NOT AN INTELLIGENT PARSER.
 
 --BUILD ALL THE CASS WITH -DCASS
-#ifdef CASS
 
 import Control.Applicative
 import qualified Data.ByteString.Lazy as BL
@@ -22,7 +21,6 @@ import Data.Csv
 import qualified Data.Vector as V
 import qualified Data.HashMap.Lazy as HM
 
-#endif
 
 --This is used for the printing for the sake of convenience
 import Data.Maybe
@@ -66,7 +64,6 @@ makeTrans True (Just x) (Just y) = Just $ Bid x y
 makeTrans False (Just x) (Just y) = Just $ Ask x y
 makeTrans _ _ _ = Nothing
 
-#ifdef CASS
 (.:?) :: (FromField a) => NamedRecord -> B.ByteString -> Parser (Maybe a)
 obj .:? key = case HM.lookup key obj of
         Nothing -> pure Nothing
@@ -122,11 +119,11 @@ instance FromNamedRecord OrderBookEntry where
             return $ read <$> n
 
 instance ToNamedRecord OrderBookEntry where
-	toNamedRecord (OrderBookEntry inst dat tim recTyp pri vol undisVol val qual trId entryTim oldPri oldVol transElem) = namedRecord ["#Instrument" .= inst, "Date" .= show dat, "Time" .= tim, "Record Type" .= show recTyp, "Price" .= showMaybe pri, "Volume" .= showMaybe vol, "Undisclosed Volume" .= showMaybe undisVol, "Value" .= showMaybe val, "Qualifiers" .= qual, "Trans ID" .= show trId]
-
-
+	toNamedRecord (OrderBookEntry inst dat tim recTyp pri vol undisVol val qual trId entryTim oldPri oldVol transElem) = namedRecord $ ["#Instrument" .= inst, "Date" .= show dat, "Time" .= tim, "Record Type" .= show recTyp, "Price" .= showMaybe pri, "Volume" .= showMaybe vol, "Undisclosed Volume" .= showMaybe undisVol, "Value" .= showMaybe val, "Qualifiers" .= qual, "Trans ID" .= show trId] ++ outputTransElem transElem ++ ["Entry Time" .= show entryTim, "Old Price" .= showMaybe oldPri, "Old Volume" .= showMaybe oldVol]
+outputTransElem tr = ["Bid ID" .= show "", "Ask ID" .= show "", "Bid/Ask" .= show "", "Buyer Broker ID" .= show "", "Seller Broker ID" .= show ""]
 showMaybe b = maybe "" (show) b
-#endif
+isBid (Bid _ _) = True
+isBid (Ask _ _) = False
 
 data RecordType = AMEND | CANCEL_TRADE | DELETE | ENTER | OFFTR | TRADE deriving (Show, Read, Eq)
 
