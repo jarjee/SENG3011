@@ -120,8 +120,12 @@ instance FromNamedRecord OrderBookEntry where
             return $ read <$> n
 
 instance ToNamedRecord OrderBookEntry where
-	toNamedRecord (OrderBookEntry inst dat tim recTyp pri vol undisVol val qual trId entryTim oldPri oldVol transElem) = namedRecord $ ["#Instrument" .= inst, "Date" .= show dat, "Time" .= tim, "Record Type" .= show recTyp, "Price" .= showMaybe pri, "Volume" .= showMaybe vol, "Undisclosed Volume" .= showMaybe undisVol, "Value" .= showMaybe val, "Qualifiers" .= qual, "Trans ID" .= show trId] ++ outputTransElem transElem ++ ["Entry Time" .= show entryTim, "Old Price" .= showMaybe oldPri, "Old Volume" .= showMaybe oldVol]
-outputTransElem tr = ["Bid ID" .= show "", "Ask ID" .= show "", "Bid/Ask" .= show "", "Buyer Broker ID" .= show "", "Seller Broker ID" .= show ""]
+	toNamedRecord (OrderBookEntry inst dat tim recTyp pri vol undisVol val qual trId entryTim oldPri oldVol transElem) = namedRecord $ ["#Instrument" .= inst, "Date" .= show dat, "Time" .= tim, "Record Type" .= show recTyp, "Price" .= showMaybe pri, "Volume" .= showMaybe vol, "Undisclosed Volume" .= showMaybe undisVol, "Value" .= showMaybe val, "Qualifiers" .= qual, "Trans ID" .= show trId] ++ outputTransElem transElem ++ ["Entry Time" .= entryTim, "Old Price" .= showMaybe oldPri, "Old Volume" .= showMaybe oldVol]
+outputTransElem tr = maybe emptyTransElem bidAskTransElem tr
+bidAskTransElem tr = if (isBid tr) then (bidTransElem tr) else (askTransElem tr)
+bidTransElem (Bid b sell) = ["Bid ID" .= show b, "Ask ID" .= B.empty, "Bid/Ask" .= 'B', "Buyer Broker ID" .= B.empty, "Seller Broker ID" .= sell]
+askTransElem (Ask a buye) = ["Bid ID" .= B.empty, "Ask ID" .= show a, "Bid/Ask" .= 'A', "Buyer Broker ID" .= show buye, "Seller Broker ID" .= B.empty]
+emptyTransElem = ["Bid ID" .= B.empty, "Ask ID" .= B.empty, "Bid/Ask" .= B.empty, "Buyer Broker ID" .= B.empty, "Seller Broker ID" .= B.empty]
 showMaybe b = maybe "" (show) b
 isBid (Bid _ _) = True
 isBid (Ask _ _) = False
