@@ -1,4 +1,4 @@
-module Orderbook (processOrderbook, amendOrderPrice, amendOrderVolume, calculateSpread) where
+module Orderbook (processOrderbook, amendOrderPrice, amendOrderVolume, calculateSpread, calculatePriceStep) where
 
 import Types
 import Data.List
