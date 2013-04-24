@@ -11,10 +11,6 @@ module Types (
 
 ) where
 
--- THIS REQUIRES CASSAVA FOR ALL THE SPECIAL FUNCTIONALITY, BY DEFAULT IT IS NOT AN INTELLIGENT PARSER.
-
---BUILD ALL THE CASS WITH -DCASS
-
 import Control.Applicative
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString as B
