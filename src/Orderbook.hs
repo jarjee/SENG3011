@@ -100,11 +100,6 @@ splitOrders (x : xs)
 	|otherwise = (bid, ask)
              where
                (bid, ask) = splitOrders xs
-	
-isBid :: TransId -> Bool
-isBid (Bid _ _) = True
-isBid (Ask _ _) = False
-
 -------------------------------------------------------------------------------
 
 -- STEP 2: Sort orders on time and price criteria

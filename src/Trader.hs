@@ -58,8 +58,14 @@ earliestOrder (bid, ask)
 recordTradeStats obook = TradeStats (getBestOrderPair obook) 
 										(getPrice obook) 
 											(getVolume (getBestOrderPair obook)) 
-												(fst (getBestOrderPair obook))
-													(snd (getBestOrderPair obook))
+--can't fix next 2 until there is entry for bidID and askID in OrderBookEntry
+												(getBidAskID (fst (getBestOrderPair obook)))
+													(getBidAskID (snd (getBestOrderPair obook)))
+
+getBidAskID :: OrderBookEntry -> Integer
+getBidAskID oBookEntry
+   | isBid (trans oBookEntry) = bidID (transId oBookEntry)
+   | otherwise = askID (transId oBookEntry)
 
 ------------------------------STEP 2: UPDATE VOLUME VALUES----------------------------
 
