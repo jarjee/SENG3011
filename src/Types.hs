@@ -2,7 +2,7 @@
 module Types (
 
     -- read/write etc
-    getTrades, readF, writeF, RecordType(TRADE,ENTER), recordType,
+    getTrades, readF, writeF, doStuff, RecordType(TRADE,ENTER), recordType,
 
     -- types needed for Orderbook
     OrderBookEntry, OrderBook(OrderBook), TransId(Bid,Ask), TradeLog,
@@ -84,7 +84,7 @@ db = do
     x <- readF "../test/input.csv"
     either (undefined) (writeF "../test/output.csv") x
 
-doStuff (h, xs) = return $ V.toList xs
+doStuff (h, xs) = V.toList xs
 
 instance FromNamedRecord OrderBookEntry where
     parseNamedRecord r = do
