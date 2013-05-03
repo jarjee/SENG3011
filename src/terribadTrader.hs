@@ -31,27 +31,41 @@ epsilon = 0.001
 sellPeak = 0.3
 buyDip = 0.5
 
+data TraderState = 
+     TraderState { kn :: [OrderBookEntry],
+                   momtm :: Float,
+                   mony :: Float,
+                   his :: [OrderBookEntry],
+                   sha :: [OrderBookEntry]} 
+                   deriving (Show, Read, Eq)
+
+defaultTraderState = TraderState [] 0.0 0.0 [] []
 
 --The function that runs a running tally of the momentum, money available and shares held.
 --This function is recursive and returns the result at the end.
-traderBrain :: [OrderBookEntry] -> [OrderBookEntry] -> Float -> Float -> [OrderBookEntry] -> ([OrderBookEntry], Float)
-traderBrain [] _ _ money shares = (shares, money)
-traderBrain (x:allRecords) known momentum money shares = do
-   let newKnown = x:known 
+traderBrain :: [OrderBookEntry] -> TraderState -> TraderState
+traderBrain [] result = result
+traderBrain (x:allRecords) current = do
+   let newKnown = x:kn current 
        newMomentum = calcAverage newKnown $ toInteger ((length newKnown) - 1)
+       momentum = momtm current
+       shares = sha current
+       histo = his current
+       money = mony current
    if abs((newMomentum - momentum)/momentum) <= epsilon then
         --We've reached a peak/valley. Buy or sell accordingly.
 
         --Sell everything we're worth. Assume we always succeed.
-        if newMomentum >= sellPeak then traderBrain allRecords newKnown newMomentum (money+shareVal(shares)) []
+        if newMomentum >= sellPeak then traderBrain allRecords current {kn = newKnown, momtm = newMomentum, 
+                                    mony = (money+shareVal(shares)), sha = [], his = histo ++ shares}
 
         --Buy as many shares as we can. Ideally from the cheapest source.
-        else if newMomentum <= buyDip then traderBrain allRecords newKnown newMomentum money shares
+        else if newMomentum <= buyDip then traderBrain allRecords current {kn = newKnown, momtm = newMomentum}
 
         --Otherwise just don't bother.
-        else traderBrain allRecords newKnown newMomentum money shares
+        else traderBrain allRecords current {kn = newKnown, momtm = newMomentum}
    else
         --Simply continue. We haven't reached anything noteworthy.
-        traderBrain allRecords newKnown newMomentum money shares
+        traderBrain allRecords current {kn = newKnown, momtm = newMomentum}
     where        
         shareVal orders = sum $ map (fromMaybe 0 . price) orders
