@@ -8,7 +8,7 @@ import Data.Maybe
 
 -- calcAverage :: orderBookEntryList -> currentIndex -> newAverage
 calcAverage :: [OrderBookEntry] -> Integer -> Float
-calcAverage oBookEntryList index = (sum' 10 index oBookEntryList) `div` 10
+calcAverage oBookEntryList index = (sum' 10 index oBookEntryList) / 10
 --   | index > 10 && (length oBookEntryList) > index = (sum' 10 index oBookEntryList) `div` 10
 --   | index > 10 && (length oBookEntryList) < index = (sum' 10 (length oBookEntryList) oBookEntryList) `div` 10
 --   | index < 10 && (length oBookEntryList) > index = 
