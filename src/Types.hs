@@ -7,7 +7,7 @@ module Types (
     -- types needed for Orderbook
     OrderBookEntry, OrderBook(OrderBook), TransId(Bid,Ask), TradeLog,
     time, price, volume, transId, orders, oldPrice, oldVolume, trans,
-	spread
+	spread, isBid
 
 ) where
 
@@ -123,6 +123,8 @@ bidTransElem (Bid b sell) = ["Bid ID" .= show b, "Ask ID" .= B.empty, "Bid/Ask" 
 askTransElem (Ask a buye) = ["Bid ID" .= B.empty, "Ask ID" .= show a, "Bid/Ask" .= 'A', "Buyer Broker ID" .= show buye, "Seller Broker ID" .= B.empty]
 emptyTransElem = ["Bid ID" .= B.empty, "Ask ID" .= B.empty, "Bid/Ask" .= B.empty, "Buyer Broker ID" .= B.empty, "Seller Broker ID" .= B.empty]
 showMaybe b = maybe "" (show) b
+
+isBid :: TransId -> Bool
 isBid (Bid _ _) = True
 isBid (Ask _ _) = False
 
