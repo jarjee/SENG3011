@@ -78,5 +78,3 @@ findCheapestAsk y [x]
 findCheapestAsk y (x:xs)
    | not (isBid x) && (price x) < (price y) = findCheapestAsk x xs
    | otherwise findCheapestAsk y xs
-    where        
-        shareVal orders = sum $ map (fromMaybe 0 . price) orders
