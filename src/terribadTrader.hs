@@ -69,3 +69,26 @@ traderBrain (x:allRecords) current = do
         traderBrain allRecords current {kn = newKnown, momtm = newMomentum}
     where        
         shareVal orders = sum $ map (fromMaybe 0 . price) orders
+
+
+buyShares :: [OrderBookEntry] -> Float -> ([OrderBookEntry], Float)
+buyShares [] money = ([], money)
+buyShares xs money = (ys, extraMoney)
+   where cheapestAsk = findCheapestAsk (head xs) x
+         ys = filter (\x -> x /= cheapestAsk) xs
+         cheapPrice = price cheapestAsk
+         extraMoney = money - (cheapPrice * (numCanBuy cheapPrice (volume cheapestAsk) money))
+
+numCanBuy :: Float -> Integer -> Float -> Integer
+numCanBuy price amount money
+   | amount >= 0 && price * amount <= money = amount
+   | otherwise = numCanBuy price (amount - 5) money
+
+findCheapestAsk :: OrderBookEntry -> [OrderBookEntry] -> OrderBookEntry
+findCheapestAsk y [] = y
+findCheapestAsk y [x]
+   | not (isBid x) && (price x) < (price y) = x
+   | otherwise = y
+findCheapestAsk y (x:xs)
+   | not (isBid x) && (price x) < (price y) = findCheapestAsk x xs
+   | otherwise findCheapestAsk y xs
