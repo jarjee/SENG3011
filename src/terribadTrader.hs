@@ -1,8 +1,7 @@
-momentum :: [OrderBookEntry] -> Integer -> numShares -> money -> ([OrderBookEntry], numShares, money)
-
 --Takes in raw list of OrderBookEntry, filters so we only have ENTER entries
 --Don't think we need to check for only unique entries (this is n^2, so I'd rather not)
 traderEntry :: [OrderBookEntry] -> [OrderBookEntry]
+traderEntry list = filter ((== ENTER) . recordType) list
 
 --Take two entries (both bids or both asks) and work out the difference
 --The concept of momentum is created from this (as the first entry comes earlier than the second)
