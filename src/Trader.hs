@@ -62,7 +62,7 @@ traderBrain (x:allRecords) current = do
        resultState = current {knLength = fromInteger newLength}
 
        newMomentum = calcAverage newKnown momentum (newLength-1)
-       gradient = (calcAverage newKnown $  momentum (newLength-2)) - (calcAverage newKnown $  momentum (newLength-3))
+       gradient = (calcAverage newKnown momentum (newLength-2)) - (calcAverage newKnown momentum (newLength-3))
 
        shares = sha resultState
        histo = his resultState
