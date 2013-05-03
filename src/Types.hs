@@ -2,7 +2,7 @@
 module Types (
 
     -- read/write etc
-    getTrades, readF, writeF, RecordType(TRADE), recordType,
+    getTrades, readF, writeF, RecordType(TRADE,ENTER), recordType,
 
     -- types needed for Orderbook
     OrderBookEntry, OrderBook(OrderBook), TransId(Bid,Ask), TradeLog,

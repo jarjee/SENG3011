@@ -1,4 +1,5 @@
 import Types
+import Data.Maybe
 -- momentum :: OrderBookEntryList -> average -> numShares -> money -> returns (OrderBookEntryList, numShares, money)
 --momentum :: [OrderBookEntry] -> Float -> Integer -> Float -> ([OrderBookEntry], Integer, Float)
 --momentum oBookEntryList average shares money
@@ -14,7 +15,7 @@ calcAverage oBookEntryList index = (sum' 10 index oBookEntryList) `div` 10
 
 sum' :: Integer -> Integer -> [OrderBookEntry] -> Float
 sum' 0 _ list = 0
-sum' _ 0 list = price (head list)
+sum' _ 0 list = fromMaybe 0 $ price $ (head list)
 sum' take index list
    | take > (index + 1) = sum' (index + 1) index list
    | take > (length list) = sum' (length list) index list
@@ -32,12 +33,16 @@ traderEntry list = filter ((== ENTER) . recordType) list
 difference :: OrderBookEntry -> OrderBookEntry -> Float
 difference = undefined
 
+epsilon = 0.001
+
 --The function that runs a running tally of the momentum, money available and shares held.
 --This function is recursive and returns the result at the end.
-traderBrain :: [OrderBookEntry] -> Float -> Float -> [OrderBookEntry] -> ([OrderBookEntry], Float)
-traderBrain [] _ money shares = (shares, money)
-traderBrain records momentum money shares = do
-    let resolution = take 10 records
-        remainder = drop 10 records
-        newMomentum = momentum resolution
-    
+traderBrain :: [OrderBookEntry] -> [OrderBookEntry] -> Float -> Float -> [OrderBookEntry] -> ([OrderBookEntry], Float)
+traderBrain [] _ _ money shares = (shares, money)
+traderBrain (x:allRecords) known momentum money shares = do
+   let newKnown = x:known 
+       newMomentum = calcAverage newKnown ((length newKnown) - 1)
+   if abs((newMomentum - momentum)/momentum) <= epsilon then
+        traderBrain allRecords newKnown newMomentum money shares
+   else
+        traderBrain allRecords newKnown newMomentum money shares
