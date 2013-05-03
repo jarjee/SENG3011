@@ -40,7 +40,7 @@ epsilon = 0.001
 
 data TraderState = 
      TraderState { kn :: [OrderBookEntry],
-                   knLength :: Int,
+                   knLength :: Integer,
                    momtm :: Float,
                    mony :: Float,
                    his :: [Share],
@@ -55,19 +55,19 @@ defaultTraderState = TraderState [] 0 0.0 0.0 [] []
 traderBrain :: [OrderBookEntry] -> TraderState -> TraderState
 traderBrain [] result = result
 traderBrain (x:allRecords) current = do
-   let newKnown = kn current ++ [x]
-       newLength = toInteger $ (knLength current) + 1
-       momentum = momtm resultState
-       resultState = current {knLength = fromInteger newLength}
+   let newKnown = (kn current) ++ [x]
+       newLength = toInteger $ length newKnown
+       momentum = momtm current
 
-       newMomentum = calcAverage newKnown momentum (newLength-2)
-       secgradient = (calcAverage newKnown newMomentum (newLength-3))
-       thrdgradient = (calcAverage newKnown secgradient (newLength-4))
+       newMomentum = calcAverage newKnown momentum (newLength-1)
+       secgradient = (calcAverage newKnown newMomentum (newLength-2))
+       thrdgradient = (calcAverage newKnown secgradient (newLength-3))
        gradient = (secgradient - thrdgradient)/thrdgradient
 
-       shares = sha resultState
-       histo = his resultState
-       money = mony resultState
+       resultState = current {kn = newKnown, knLength = newLength, momtm = newMomentum}
+       shares = sha current
+       histo = his current
+       money = mony current
    if abs((newMomentum - momentum)/momentum) <= epsilon then
         --We've reached a peak/valley. Buy or sell accordingly.
 
@@ -77,17 +77,17 @@ traderBrain (x:allRecords) current = do
 
         --Buy as many shares as we can. Ideally from the cheapest source.
         --else 
-        if gradient < 0 then do
+        if gradient < 1 then do
             let result = buyShares newKnown money
 
-            traderBrain allRecords resultState {kn = remShares result, momtm = newMomentum, 
+            traderBrain allRecords $ resultState {kn = remShares result, 
             mony = (remMoney result), sha = (bouSha result):shares}
 
         --Otherwise just don't bother.
-        else traderBrain allRecords resultState {kn = newKnown, momtm = newMomentum}
+        else traderBrain allRecords $ resultState 
    else
         --Simply continue. We haven't reached anything noteworthy.
-        traderBrain allRecords resultState {kn = newKnown, momtm = newMomentum}
+        traderBrain allRecords $ resultState 
     where        
         shareVal orders = sum $ map (\x -> (shaPri x) * fromInteger (shAmt x)) orders
 
