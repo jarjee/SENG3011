@@ -34,6 +34,7 @@ difference :: OrderBookEntry -> OrderBookEntry -> Float
 difference = undefined
 
 epsilon = 0.001
+sellPeak = 0.3
 
 --The function that runs a running tally of the momentum, money available and shares held.
 --This function is recursive and returns the result at the end.
@@ -41,8 +42,16 @@ traderBrain :: [OrderBookEntry] -> [OrderBookEntry] -> Float -> Float -> [OrderB
 traderBrain [] _ _ money shares = (shares, money)
 traderBrain (x:allRecords) known momentum money shares = do
    let newKnown = x:known 
-       newMomentum = calcAverage newKnown ((length newKnown) - 1)
+       newMomentum = calcAverage newKnown $ toInteger ((length newKnown) - 1)
    if abs((newMomentum - momentum)/momentum) <= epsilon then
-        traderBrain allRecords newKnown newMomentum money shares
+        --We've reached a peak/valley. Buy or sell accordingly.
+        if newMomentum >= sellPeak then
+            --Sell everything we're worth. Assume we always succeed.
+            traderBrain allRecords newKnown newMomentum (money+shareVal(shares)) []
+            else
+            traderBrain allRecords newKnown newMomentum money shares
    else
+        --Simply continue. We haven't reached anything noteworthy.
         traderBrain allRecords newKnown newMomentum money shares
+   where
+        shareVal orders = 1.0
