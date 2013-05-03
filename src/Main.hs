@@ -6,7 +6,7 @@ import Data.Csv
 
 import Types
 import Orderbook
--- import Trader
+import Trader
 import Views
 
 main = do

@@ -1,9 +1,4 @@
-<<<<<<< HEAD
 import Types
-
-=======
-<<<<<<< Updated upstream
-=======
 -- momentum :: OrderBookEntryList -> average -> numShares -> money -> returns (OrderBookEntryList, numShares, money)
 --momentum :: [OrderBookEntry] -> Float -> Integer -> Float -> ([OrderBookEntry], Integer, Float)
 --momentum oBookEntryList average shares money
@@ -26,10 +21,6 @@ sum' take index list
    | index >= (length list) = sum' take (length list - 1) list
    | otherwise = price (list !! index) + (sum' (take - 1) (index - 1) list)
 
-
-
->>>>>>> Stashed changes
->>>>>>> b871c3dfe0ef1b5c7252ed4eda20fe599bef37fb
 --Takes in raw list of OrderBookEntry, filters so we only have ENTER entries
 --Don't think we need to check for only unique entries (this is n^2, so I'd rather not)
 traderEntry :: [OrderBookEntry] -> [OrderBookEntry]
