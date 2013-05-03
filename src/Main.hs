@@ -14,11 +14,20 @@ main = do
 	parse csv
 
 parse :: Either String (Header, V.Vector OrderBookEntry) -> IO()
-parse fields = either (print) (filterFields) fields
+parse fields = either (putStrLn) (dataProcessing) fields
 
-filterFields :: (Header, V.Vector OrderBookEntry) -> IO()
-filterFields (head, fields) = do
-	Types.writeF "output.csv" $ (head, V.fromList  $ filter ((== TRADE) . recordType) $ V.toList fields)
+dataProcessing :: (Header, V.Vector OrderBookEntry) -> IO()
+dataProcessing (head, fields) = do
+    let allRecords = V.toList fields
+        cash = 1000
+        tradeRecords = traderEntry allRecords
+        tradeResult = traderBrain tradeRecords $ defaultTraderState {mony = cash}
+    putStrLn $ "The Trader was given : "++show(cash)
+    putStrLn $ "The Trader ended up with:\n"
+    putStrLn $ show(mony tradeResult)++" in cash\n"
+    putStrLn $ "Held shares of:\n"
+    putStrLn $ "And had sold previously shares worth:\n"
+
 
 --main = do
 --    handle <- openFile "../test/test.csv" ReadMode

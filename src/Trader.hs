@@ -1,102 +1,114 @@
---This file will hold the code required to do all the trade generation
-module Trader (generateTrades, Strategy(..)) where
+module Trader (
+    traderEntry, TraderState(mony,his,sha),
+    defaultTraderState, traderBrain
+)
+  where
 
 import Types
-import Orderbook
-import Data.Functor
-import Control.Applicative
 import Data.Maybe
+-- momentum :: OrderBookEntryList -> average -> numShares -> money -> returns (OrderBookEntryList, numShares, money)
+--momentum :: [OrderBookEntry] -> Float -> Integer -> Float -> ([OrderBookEntry], Integer, Float)
+--momentum oBookEntryList average shares money
+--   | average > minSell = sell
+--   | average < maxBuy = buy
 
------------------------------------------------------------------------------
-------------------- IMPORTANT NOTES FOR THIS MODULE -------------------------
------------------------------------------------------------------------------
+-- calcAverage :: orderBookEntryList -> currentIndex -> newAverage
+calcAverage :: [OrderBookEntry] -> Integer -> Float
+calcAverage oBookEntryList index = (sum' 10 index oBookEntryList) / 10
+--   | index > 10 && (length oBookEntryList) > index = (sum' 10 index oBookEntryList) `div` 10
+--   | index > 10 && (length oBookEntryList) < index = (sum' 10 (length oBookEntryList) oBookEntryList) `div` 10
+--   | index < 10 && (length oBookEntryList) > index = 
 
--- Three functions must be called here to succesfully generate one trade
--- 1. generateTrades
--- 2. pergeOrderBook
--- 3. newSpread
--- eventually returning an up-to-date orderbook
--- call this series recursively for full trading
+sum' :: Integer -> Integer -> [OrderBookEntry] -> Float
+sum' 0 _ list = 0
+sum' _ 0 list = fromMaybe 0 $ price $ (head list)
+sum' amount index list
+   | amount > (index + 1) = sum' (index + 1) index list
+   | amount > (toInteger (length list)) = sum' (toInteger (length list)) index list
+   | index >= (toInteger (length list)) = sum' amount (toInteger (length list - 1)) list
+   | otherwise = (fromMaybe 0 (price (list !! (fromIntegral index)))) + (sum' (amount - 1) (index - 1) list)
 
--- have introduced a new data type which could be accumulated into a list of trades
--- for reporting purposes
+--Takes in raw list of OrderBookEntry, filters so we only have ENTER entries
+--Don't think we need to check for only unique entries (this is n^2, so I'd rather not)
+traderEntry :: [OrderBookEntry] -> [OrderBookEntry]
+traderEntry list = filter ((== ENTER) . recordType) list
 
--------------------------------------------------------------------------------
+epsilon = 0.001
+sellPeak = 0.3
+buyDip = -0.3
 
-data TradeStats =
-				TradeStats { 	trade :: (OrderBookEntry, OrderBookEntry),
-								tradePrice :: Maybe Float,
-								tradeVolume :: Maybe Integer,
-								bidID :: Integer,
-								askID :: Integer
-							} deriving (Show, Eq)
+data TraderState = 
+     TraderState { kn :: [OrderBookEntry],
+                   momtm :: Float,
+                   mony :: Float,
+                   his :: [Share],
+                   sha :: [Share]} 
+                   deriving (Show, Read, Eq)
 
-------------------------------STEP 1: GET TRADE DETAILS---------------------------------
+--Initialises a default traderState object so you don't have to.
+defaultTraderState = TraderState [] 0.0 0.0 [] []
 
---getBestOrderPair :: orderbook -> (OrderBookEntry, OrderBookEntry)
-getBestOrderPair obook = (head (fst (orders obook)), head (snd (orders obook)) )
+--The function that runs a running tally of the momentum, money available and shares held.
+--This function is recursive and returns the result at the end.
+traderBrain :: [OrderBookEntry] -> TraderState -> TraderState
+traderBrain [] result = result
+traderBrain (x:allRecords) current = do
+   let newKnown = x:kn current
+       knownLength = toInteger $ length newKnown
+       newMomentum = calcAverage newKnown $ knownLength-1
+       gradient = (calcAverage newKnown $ knownLength-2)-(calcAverage newKnown $ knownLength-3)
+       momentum = momtm current
+       shares = sha current
+       histo = his current
+       money = mony current
+   if abs((newMomentum - momentum)/momentum) <= epsilon then
+        --We've reached a peak/valley. Buy or sell accordingly.
 
---getVolume :: (OrderBookEntry, OrderBookEntry) -> Integer
-getVolume (bid, ask)
-		|((volume bid) < (volume ask)) = (volume bid)
-		|((volume ask) < (volume bid)) = (volume ask)
-		|otherwise = (volume bid)
+        --Sell everything we're worth. Assume we always succeed.
+        if gradient >= sellPeak then traderBrain allRecords current {kn = newKnown, momtm = newMomentum, 
+                                    mony = (money+shareVal(shares)), sha = [], his = histo ++ shares}
 
---getPrice :: OrderBook -> Float
-getPrice obook  
-		| ((spread obook) == 0) = (price (fst (getBestOrderPair obook)) )
-		| ((spread obook) < 0) = price (earliestOrder (getBestOrderPair obook))
-		| otherwise = doOtherThing
-		
-doOtherThing = undefined
-												
---earliestOrder :: (OrderBookEntry, OrderBookEntry) -> Float
-earliestOrder (bid, ask)
-		|((time bid) < (time ask)) = bid
-		|otherwise = ask
-							
---recordTradeStats :: OrderBook -> TradeStats		
-recordTradeStats obook = TradeStats (getBestOrderPair obook) 
-										(getPrice obook) 
-											(getVolume (getBestOrderPair obook)) 
---can't fix next 2 until there is entry for bidID and askID in OrderBookEntry
-												(getBidAskID (fromJust (trans (fst (getBestOrderPair obook)))))
-													(getBidAskID (fromJust (trans (snd (getBestOrderPair obook)))))
+        --Buy as many shares as we can. Ideally from the cheapest source.
+        else if gradient <= buyDip then do
+            let result = buyShares newKnown money
 
-getBidAskID :: TransId -> Integer
-getBidAskID (Bid bidId _) = bidId
-getBidAskID (Ask askId _) = askId
+            traderBrain allRecords current {kn = remShares result, momtm = newMomentum, 
+            mony = (remMoney result), sha = (bouSha result):shares}
 
-------------------------------STEP 2: UPDATE VOLUME VALUES----------------------------
+        --Otherwise just don't bother.
+        else traderBrain allRecords current {kn = newKnown, momtm = newMomentum}
+   else
+        --Simply continue. We haven't reached anything noteworthy.
+        traderBrain allRecords current {kn = newKnown, momtm = newMomentum}
+    where        
+        shareVal orders = sum $ map (\x -> (shaPri x) * fromInteger (shAmt x)) orders
 
---generateTrades :: OrderBook -> TradeLog
-generateTrades orderbook = makeTrade (recordTradeStats orderbook) orderbook
+data BoughtShares = BoughtShares { remShares :: [OrderBookEntry],
+                remMoney :: Float,
+                bouSha :: Share} deriving (Show, Read, Eq)
 
---makeTrade :: TradeStats -> OrderBook -> OrderBook
-makeTrade tstats obook = updateBidList tstats (updateAskList tstats obook)
+data Share = Share { shAmt :: Integer,
+        shaPri :: Float } deriving (Show, Read, Eq)
 
---updateBidList :: TradeStats -> OrderBook -> OrderBook
-updateBidList :: TradeStats -> OrderBook -> OrderBook
-updateBidList tstats obook = obook {orders = ([(head (fst (orders obook))) {volume = ((volume (head (fst (orders obook)))) - (tradeVolume tstats))}] ++ (drop 1 (fst (orders obook))), (snd (orders obook)))}
+buyShares :: [OrderBookEntry] -> Float -> BoughtShares
+buyShares [] money = BoughtShares [] money $ Share 0 0
+buyShares xs money = BoughtShares ys extraMoney $ Share volToBuy cheapPrice
+   where cheapestAsk = findCheapestAsk (head xs) xs
+         ys = filter (\x -> x /= cheapestAsk) xs
+         cheapPrice = fromMaybe 999999999999999999999999999 (price cheapestAsk)
+         volToBuy = numCanBuy cheapPrice (fromMaybe 0 (volume cheapestAsk)) money
+         extraMoney = money - (cheapPrice * (fromInteger volToBuy))
 
---updateAskList :: TradeStats -> OrderBook -> OrderBook
-updateAskList tstats obook = obook {orders = ([(head (snd (orders obook))) {volume = ((volume (head (snd (orders obook)))) - (tradeVolume tstats))}] ++ (drop 1 (snd (orders obook))), (snd (orders obook)))}
+numCanBuy :: Float -> Integer -> Float -> Integer
+numCanBuy price amount money
+   | amount >= 0 && price * (fromInteger amount) <= money = amount
+   | otherwise = numCanBuy price (amount - 5) money
 
-------------------------------STEP 3: DELETE USED ORDERS------------------------------------
-				
---pergeOrderBook :: OrderBook -> (OrderBookEntry, OrderBookEntry)
-pergeOrderBook obook = (pergeOrders (fst (orders obook)), pergeOrders (snd (orders obook)))
-
---pergeOrders :: [OrderBookEntry] -> [OrderBookEntry]
-pergeOrders os = filter (\o -> (volume o) /= 0) os
-				
-------------------------------STEP : DETERMINE NEW SPREAD------------------------------------
-				
---newSpread :: OrderBook -> OrderBook
---newSpread orderbook = orderbook {spread = calculateSpread (orders orderbook)}
-
-----------------------------------------------------------------------------------------------
-
---Whatever you want, I've just put this in place so it can compile
-
-data Strategy = TradeBadly Int | TradeLimit Int Int deriving (Show, Eq, Read)
+findCheapestAsk :: OrderBookEntry -> [OrderBookEntry] -> OrderBookEntry
+findCheapestAsk y [] = y
+findCheapestAsk y [x]
+   | not (isBid (fromMaybe (Bid 0 0) (trans x))) && (price x) < (price y) = x
+   | otherwise = y
+findCheapestAsk y (x:xs)
+   | not (isBid (fromMaybe (Bid 0 0) (trans x))) && (price x) < (price y) = findCheapestAsk x xs
+   | otherwise = findCheapestAsk y xs
