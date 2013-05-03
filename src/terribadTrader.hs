@@ -16,11 +16,11 @@ calcAverage oBookEntryList index = (sum' 10 index oBookEntryList) `div` 10
 sum' :: Integer -> Integer -> [OrderBookEntry] -> Float
 sum' 0 _ list = 0
 sum' _ 0 list = fromMaybe 0 $ price $ (head list)
-sum' take index list
-   | take > (index + 1) = sum' (index + 1) index list
-   | take > (length list) = sum' (length list) index list
-   | index >= (length list) = sum' take (length list - 1) list
-   | otherwise = price (list !! index) + (sum' (take - 1) (index - 1) list)
+sum' amount index list
+   | amount > (index + 1) = sum' (index + 1) index list
+   | amount > (toInteger (length list)) = sum' (toInteger (length list)) index list
+   | index >= (toInteger (length list)) = sum' amount (toInteger (length list - 1)) list
+   | otherwise = (fromMaybe 0 (price (list !! (fromIntegral index)))) + (sum' (amount - 1) (index - 1) list)
 
 --Takes in raw list of OrderBookEntry, filters so we only have ENTER entries
 --Don't think we need to check for only unique entries (this is n^2, so I'd rather not)
