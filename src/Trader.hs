@@ -15,7 +15,8 @@ import Data.Maybe
 -- calcAverage :: orderBookEntryList -> currentIndex -> newAverage
 calcAverage :: [OrderBookEntry] -> Float -> Integer -> Float
 calcAverage oBookEntryList oldAverage index 
-   | index < 10 = (sum' 10 index oBookEntryList) / 10
+   | index < 4 = 0
+   | index < 10  && index >= 4 = (sum' 10 index oBookEntryList) / 10
    | otherwise = oldAverage - (fromMaybe 0 (price (oBookEntryList !! (fromIntegral (index - 10)))) / 10) + (fromMaybe 0 (price (oBookEntryList !! (fromIntegral index))) / 10)
 --   | index > 10 && (length oBookEntryList) > index = (sum' 10 index oBookEntryList) `div` 10
 --   | index > 10 && (length oBookEntryList) < index = (sum' 10 (length oBookEntryList) oBookEntryList) `div` 10
@@ -36,8 +37,6 @@ traderEntry :: [OrderBookEntry] -> [OrderBookEntry]
 traderEntry list = filter ((== ENTER) . recordType) list
 
 epsilon = 0.001
-sellPeak = 0.002
-buyDip = -0.002
 
 data TraderState = 
      TraderState { kn :: [OrderBookEntry],
@@ -62,7 +61,9 @@ traderBrain (x:allRecords) current = do
        resultState = current {knLength = fromInteger newLength}
 
        newMomentum = calcAverage newKnown momentum (newLength-1)
-       gradient = (calcAverage newKnown momentum (newLength-2)) - (calcAverage newKnown momentum (newLength-3))
+       secgradient = (calcAverage newKnown momentum (newLength-2))
+       thrdgradient = (calcAverage newKnown secgradient (newLength-3))
+       gradient = secgradient - thrdgradient
 
        shares = sha resultState
        histo = his resultState
@@ -71,7 +72,7 @@ traderBrain (x:allRecords) current = do
         --We've reached a peak/valley. Buy or sell accordingly.
 
         --Sell everything we're worth. Assume we always succeed.
-        if gradient >= sellPeak then traderBrain allRecords resultState {kn = newKnown, momtm = newMomentum, 
+        if gradient >= 0 then traderBrain allRecords resultState {kn = newKnown, momtm = newMomentum, 
                                     mony = (money+shareVal(shares)), sha = [], his = histo ++ shares}
 
         --Buy as many shares as we can. Ideally from the cheapest source.
