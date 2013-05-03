@@ -75,7 +75,7 @@ traderBrain (x:allRecords) current = do
         --Simply continue. We haven't reached anything noteworthy.
         traderBrain allRecords current {kn = newKnown, momtm = newMomentum}
     where        
-        shareVal orders = 5.0
+        shareVal orders = sum $ map (\x -> (shaPri x) * fromInteger (shAmt x)) orders
 
 data BoughtShares = BoughtShares { remShares :: [OrderBookEntry],
                 remMoney :: Float,
