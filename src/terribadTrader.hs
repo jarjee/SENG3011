@@ -27,14 +27,10 @@ sum' amount index list
 traderEntry :: [OrderBookEntry] -> [OrderBookEntry]
 traderEntry list = filter ((== ENTER) . recordType) list
 
---Take two entries (both bids or both asks) and work out the difference
---The concept of momentum is created from this (as the first entry comes earlier than the second)
---Potentially use time as the Y-coordinate?
-difference :: OrderBookEntry -> OrderBookEntry -> Float
-difference = undefined
-
 epsilon = 0.001
 sellPeak = 0.3
+buyDip = 0.5
+
 
 --The function that runs a running tally of the momentum, money available and shares held.
 --This function is recursive and returns the result at the end.
@@ -45,13 +41,17 @@ traderBrain (x:allRecords) known momentum money shares = do
        newMomentum = calcAverage newKnown $ toInteger ((length newKnown) - 1)
    if abs((newMomentum - momentum)/momentum) <= epsilon then
         --We've reached a peak/valley. Buy or sell accordingly.
-        if newMomentum >= sellPeak then
-            --Sell everything we're worth. Assume we always succeed.
-            traderBrain allRecords newKnown newMomentum (money+shareVal(shares)) []
-            else
-            traderBrain allRecords newKnown newMomentum money shares
+
+        --Sell everything we're worth. Assume we always succeed.
+        if newMomentum >= sellPeak then traderBrain allRecords newKnown newMomentum (money+shareVal(shares)) []
+
+        --Buy as many shares as we can. Ideally from the cheapest source.
+        else if newMomentum <= buyDip then traderBrain allRecords newKnown newMomentum money shares
+
+        --Otherwise just don't bother.
+        else traderBrain allRecords newKnown newMomentum money shares
    else
         --Simply continue. We haven't reached anything noteworthy.
         traderBrain allRecords newKnown newMomentum money shares
-   where
-        shareVal orders = 1.0
+    where        
+        shareVal orders = sum $ map (fromMaybe 0 . price) orders
