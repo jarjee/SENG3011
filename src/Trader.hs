@@ -13,8 +13,10 @@ import Data.Maybe
 --   | average < maxBuy = buy
 
 -- calcAverage :: orderBookEntryList -> currentIndex -> newAverage
-calcAverage :: [OrderBookEntry] -> Integer -> Float
-calcAverage oBookEntryList index = (sum' 10 index oBookEntryList) / 10
+calcAverage :: [OrderBookEntry] -> Float -> Integer -> Float
+calcAverage oBookEntryList oldAverage index 
+   | index < 10 = (sum' 10 index oBookEntryList) / 10
+   | otherwise = oldAverage - (price (oBookEntryList !! (index - 10)) / 10) + (price (oBookEntryList !! index) / 10)
 --   | index > 10 && (length oBookEntryList) > index = (sum' 10 index oBookEntryList) `div` 10
 --   | index > 10 && (length oBookEntryList) < index = (sum' 10 (length oBookEntryList) oBookEntryList) `div` 10
 --   | index < 10 && (length oBookEntryList) > index = 
