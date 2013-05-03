@@ -34,8 +34,8 @@ traderEntry :: [OrderBookEntry] -> [OrderBookEntry]
 traderEntry list = filter ((== ENTER) . recordType) list
 
 epsilon = 0.001
-sellPeak = 0.3
-buyDip = -0.3
+sellPeak = 0.002
+buyDip = -0.002
 
 data TraderState = 
      TraderState { kn :: [OrderBookEntry],
@@ -54,9 +54,12 @@ traderBrain :: [OrderBookEntry] -> TraderState -> TraderState
 traderBrain [] result = result
 traderBrain (x:allRecords) current = do
    let newKnown = x:kn current
-       knownLength = toInteger $ length newKnown
-       newMomentum = calcAverage newKnown $ knownLength-1
-       gradient = (calcAverage newKnown $ knownLength-2)-(calcAverage newKnown $ knownLength-3)
+
+       momentumList = reverse $ take 30 $ reverse newKnown
+       momentumLength = toInteger $ length momentumList
+       newMomentum = calcAverage momentumList $ momentumLength-1
+       gradient = (calcAverage momentumList $ momentumLength-2) - (calcAverage momentumList $ momentumLength-3)
+
        momentum = momtm current
        shares = sha current
        histo = his current

@@ -23,7 +23,7 @@ dataProcessing (head, fields) = do
         tradeRecords = traderEntry allRecords
         tradeResult = traderBrain tradeRecords $ defaultTraderState {mony = cash}
     putStrLn $ "The Trader was given : "++show(cash)
-    putStrLn $ "The Trader ended up with:\n"
+    putStrLn $ "The Trader ended up with:"
     putStrLn $ show(mony tradeResult)++" in cash\n"
     putStrLn $ "Held shares of:\n"
     putStrLn $ "And had sold previously shares worth:\n"
