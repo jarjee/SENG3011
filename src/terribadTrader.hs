@@ -74,21 +74,22 @@ traderBrain (x:allRecords) current = do
 buyShares :: [OrderBookEntry] -> Float -> ([OrderBookEntry], Float)
 buyShares [] money = ([], money)
 buyShares xs money = (ys, extraMoney)
-   where cheapestAsk = findCheapestAsk (head xs) x
+   where cheapestAsk = findCheapestAsk (head xs) xs
          ys = filter (\x -> x /= cheapestAsk) xs
-         cheapPrice = price cheapestAsk
-         extraMoney = money - (cheapPrice * (numCanBuy cheapPrice (volume cheapestAsk) money))
+         cheapPrice = fromMaybe 999999999999999999999999999 (price cheapestAsk)
+         volToBuy = numCanBuy cheapPrice (fromMaybe 0 (volume cheapestAsk)) money
+         extraMoney = money - (cheapPrice * (fromInteger volToBuy))
 
 numCanBuy :: Float -> Integer -> Float -> Integer
 numCanBuy price amount money
-   | amount >= 0 && price * amount <= money = amount
+   | amount >= 0 && price * (fromInteger amount) <= money = amount
    | otherwise = numCanBuy price (amount - 5) money
 
 findCheapestAsk :: OrderBookEntry -> [OrderBookEntry] -> OrderBookEntry
 findCheapestAsk y [] = y
 findCheapestAsk y [x]
-   | not (isBid x) && (price x) < (price y) = x
+   | not (isBid (fromMaybe (Bid 0 0) (trans x))) && (price x) < (price y) = x
    | otherwise = y
 findCheapestAsk y (x:xs)
-   | not (isBid x) && (price x) < (price y) = findCheapestAsk x xs
-   | otherwise findCheapestAsk y xs
+   | not (isBid (fromMaybe (Bid 0 0) (trans x))) && (price x) < (price y) = findCheapestAsk x xs
+   | otherwise = findCheapestAsk y xs
