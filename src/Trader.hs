@@ -55,10 +55,9 @@ traderBrain [] result = result
 traderBrain (x:allRecords) current = do
    let newKnown = x:kn current
 
-       momentumList = reverse $ take 30 $ reverse newKnown
-       momentumLength = toInteger $ length momentumList
-       newMomentum = calcAverage momentumList $ momentumLength-1
-       gradient = (calcAverage momentumList $ momentumLength-2) - (calcAverage momentumList $ momentumLength-3)
+       momentumList = reverse $ take 10 $ reverse newKnown
+       newMomentum = calcAverage momentumList $ 9
+       gradient = (calcAverage momentumList $ 8) - (calcAverage momentumList $ 7)
 
        momentum = momtm current
        shares = sha current
@@ -72,7 +71,7 @@ traderBrain (x:allRecords) current = do
                                     mony = (money+shareVal(shares)), sha = [], his = histo ++ shares}
 
         --Buy as many shares as we can. Ideally from the cheapest source.
-        else if gradient <= buyDip then do
+        else if gradient < 0 then do
             let result = buyShares newKnown money
 
             traderBrain allRecords current {kn = remShares result, momtm = newMomentum, 
