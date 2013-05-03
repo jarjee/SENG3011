@@ -5,6 +5,7 @@ import Types
 import Orderbook
 import Data.Functor
 import Control.Applicative
+import Data.Maybe
 
 -----------------------------------------------------------------------------
 ------------------- IMPORTANT NOTES FOR THIS MODULE -------------------------
@@ -59,13 +60,12 @@ recordTradeStats obook = TradeStats (getBestOrderPair obook)
 										(getPrice obook) 
 											(getVolume (getBestOrderPair obook)) 
 --can't fix next 2 until there is entry for bidID and askID in OrderBookEntry
-												(getBidAskID (fst (getBestOrderPair obook)))
-													(getBidAskID (snd (getBestOrderPair obook)))
+												(getBidAskID (fromJust (trans (fst (getBestOrderPair obook)))))
+													(getBidAskID (fromJust (trans (snd (getBestOrderPair obook)))))
 
-getBidAskID :: OrderBookEntry -> Integer
-getBidAskID oBookEntry
-   | isBid (trans oBookEntry) = bidID (transId oBookEntry)
-   | otherwise = askID (transId oBookEntry)
+getBidAskID :: TransId -> Integer
+getBidAskID (Bid bidId _) = bidId
+getBidAskID (Ask askId _) = askId
 
 ------------------------------STEP 2: UPDATE VOLUME VALUES----------------------------
 
