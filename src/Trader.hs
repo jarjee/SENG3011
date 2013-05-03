@@ -15,9 +15,9 @@ import Data.Maybe
 -- calcAverage :: orderBookEntryList -> currentIndex -> newAverage
 calcAverage :: [OrderBookEntry] -> Float -> Integer -> Float
 calcAverage oBookEntryList oldAverage index 
-   | index < 4 = oldAverage
-   | index < 10  && index >= 4 = (sum' 10 index oBookEntryList) / 10
-   | otherwise = oldAverage - (fromMaybe 0 (price (oBookEntryList !! (fromIntegral (index - 10)))) / 10) + (fromMaybe 0 (price (oBookEntryList !! (fromIntegral index))) / 10)
+   | index < 0  = oldAverage
+   | index < 10 = (sum' 10 index oBookEntryList) / 10
+   | otherwise  = oldAverage - (fromMaybe 0 (price (oBookEntryList !! (fromIntegral (index - 10)))) / 10) + (fromMaybe 0 (price (oBookEntryList !! (fromIntegral index))) / 10)
 --   | index > 10 && (length oBookEntryList) > index = (sum' 10 index oBookEntryList) `div` 10
 --   | index > 10 && (length oBookEntryList) < index = (sum' 10 (length oBookEntryList) oBookEntryList) `div` 10
 --   | index < 10 && (length oBookEntryList) > index = 
@@ -55,15 +55,15 @@ defaultTraderState = TraderState [] 0 0.0 0.0 [] []
 traderBrain :: [OrderBookEntry] -> TraderState -> TraderState
 traderBrain [] result = result
 traderBrain (x:allRecords) current = do
-   let newKnown = x:kn current
-       newLength = toInteger $ knLength current + 1
+   let newKnown = kn current ++ [x]
+       newLength = toInteger $ (knLength current) + 1
        momentum = momtm resultState
        resultState = current {knLength = fromInteger newLength}
 
-       newMomentum = calcAverage newKnown momentum (newLength-1)
-       secgradient = (calcAverage newKnown momentum (newLength-2))
-       thrdgradient = (calcAverage newKnown secgradient (newLength-3))
-       gradient = secgradient - thrdgradient
+       newMomentum = calcAverage newKnown momentum (newLength-2)
+       secgradient = (calcAverage newKnown newMomentum (newLength-3))
+       thrdgradient = (calcAverage newKnown secgradient (newLength-4))
+       gradient = (secgradient - thrdgradient)/thrdgradient
 
        shares = sha resultState
        histo = his resultState
@@ -72,11 +72,12 @@ traderBrain (x:allRecords) current = do
         --We've reached a peak/valley. Buy or sell accordingly.
 
         --Sell everything we're worth. Assume we always succeed.
-        if gradient >= 0 then traderBrain allRecords resultState {kn = newKnown, momtm = newMomentum, 
-                                    mony = (money+shareVal(shares)), sha = [], his = histo ++ shares}
+        --if gradient >= 0 then traderBrain allRecords resultState {kn = newKnown, momtm = newMomentum, 
+        --                            mony = (money+shareVal(shares)), sha = [], his = histo ++ shares}
 
         --Buy as many shares as we can. Ideally from the cheapest source.
-        else if gradient < 0 then do
+        --else 
+        if gradient < 0 then do
             let result = buyShares newKnown money
 
             traderBrain allRecords resultState {kn = remShares result, momtm = newMomentum, 
