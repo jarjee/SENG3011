@@ -34,6 +34,7 @@ epsilon = 0.001
 
 data TraderState = 
      TraderState { kn :: [OrderBookEntry],
+                   knAsks :: [OrderBookEntry],
                    knLength :: Integer,
                    momtm :: Float,
                    money :: Float,
@@ -42,7 +43,7 @@ data TraderState =
                    deriving (Show, Read, Eq)
 
 --Initialises a default traderState object so you don't have to.
-defaultTraderState = TraderState [] 0 0.0 0.0 [] []
+defaultTraderState = TraderState [] [] 0 0.0 0.0 [] []
 
 --The function that runs a running tally of the momentum, currMoney available and shares held.
 --This function is recursive and returns the result at the end.
@@ -52,6 +53,7 @@ traderBrain (x:allRecords) current = do
    let newKnown = (kn current) ++ [x]
        newLength = (knLength current) + 1
        momentum = momtm current
+       newAskList = if (isBid (trans x) /= True) then sortBy (lowPrice) (x:knAsks current) else knAsks current
 
        newMomentum = calcAverage newKnown momentum (newLength-1)
        secgradient = (calcAverage newKnown newMomentum (newLength-2))
@@ -67,7 +69,7 @@ traderBrain (x:allRecords) current = do
         --We've reached a peak/valley. Buy or sell accordingly.
 
         --Sell everything we're worth. Assume we always succeed.
-        if gradient > 0.0003 then do
+        if gradient > 0.002 then do
             let sellUpdate = resultState {
                 money = (currMoney+shareVal gradient (shares)), 
                 sha = [], his = histo ++ shares}
@@ -75,7 +77,7 @@ traderBrain (x:allRecords) current = do
 
         --Buy as many shares as we can. Ideally from the cheapest source.
         else if gradient <= 0 then do
-            let result = buyShares' newKnown currMoney
+            let result = buyShares' newAskList currMoney
                 updatedShares = if shAmt (bouSha result) /= 0 then resultState {sha = (bouSha result):shares, kn = remShares result, knLength = toInteger $ length $ remShares result} else resultState
 
             --knLength must be -1 as we remove a record when we buy
@@ -88,7 +90,7 @@ traderBrain (x:allRecords) current = do
         --Simply continue. We haven't reached anything noteworthy.
         traderBrain allRecords $ resultState 
     where        
-        shareVal gradient orders = (1+gradient) * (sum $ map (\x -> (shaPri x) * fromInteger (shAmt x)) orders)
+        shareVal gradient orders = (1+abs(gradient)) * (sum $ map (\x -> (shaPri x) * fromInteger (shAmt x)) orders)
 
 data BoughtShares = BoughtShares { remShares :: [OrderBookEntry],
                 remMoney :: Float,
@@ -100,9 +102,8 @@ data Share = Share { shAmt :: Integer,
 buyShares' :: [OrderBookEntry] -> Float -> BoughtShares
 buyShares' [] money = BoughtShares [] money $ Share 0 0
 buyShares' list money = do
-    let askList = filter ((/= True) . isBid . trans) list
-    if askList /= [] then do
-        let bestPrice = minimumBy (lowPrice) askList
+    if list /= [] then do
+        let bestPrice = head list
             bestPriceCost = maybe (0) (id) (price bestPrice)
             canBuy = truncate $ money / bestPriceCost
         if canBuy > 0 then do
