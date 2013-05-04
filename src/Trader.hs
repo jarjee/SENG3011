@@ -1,5 +1,5 @@
 module Trader (
-    traderEntry, TraderState(mony,his,sha),
+    traderEntry, TraderState(money,his,sha),
     defaultTraderState, traderBrain
 )
   where
@@ -34,7 +34,7 @@ data TraderState =
      TraderState { kn :: [OrderBookEntry],
                    knLength :: Integer,
                    momtm :: Float,
-                   mony :: Float,
+                   money :: Float,
                    his :: [Share],
                    sha :: [Share]} 
                    deriving (Show, Read, Eq)
@@ -42,13 +42,13 @@ data TraderState =
 --Initialises a default traderState object so you don't have to.
 defaultTraderState = TraderState [] 0 0.0 0.0 [] []
 
---The function that runs a running tally of the momentum, money available and shares held.
+--The function that runs a running tally of the momentum, currMoney available and shares held.
 --This function is recursive and returns the result at the end.
 traderBrain :: [OrderBookEntry] -> TraderState -> TraderState
 traderBrain [] result = result
 traderBrain (x:allRecords) current = do
    let newKnown = (kn current) ++ [x]
-       newLength = knLength current
+       newLength = (knLength current) + 1
        momentum = momtm current
 
        newMomentum = calcAverage newKnown momentum (newLength-1)
@@ -59,20 +59,25 @@ traderBrain (x:allRecords) current = do
        resultState = current {kn = newKnown, knLength = newLength, momtm = newMomentum}
        shares = sha current
        histo = his current
-       money = mony current
+       currMoney = money current
    if abs((newMomentum - momentum)/momentum) <= epsilon then
         --We've reached a peak/valley. Buy or sell accordingly.
 
         --Sell everything we're worth. Assume we always succeed.
-        if gradient > 1.01 then traderBrain allRecords resultState {
-            mony = (money+shareVal(shares)), sha = [], his = histo ++ shares}
+        if gradient >= 0 then do
+            let sellUpdate = resultState {
+                money = (currMoney+shareVal(shares)), 
+                sha = [], his = histo ++ shares}
+            traderBrain allRecords sellUpdate
 
         --Buy as many shares as we can. Ideally from the cheapest source.
-        else if gradient < 1 then do
-            let result = buyShares newKnown money
+        else if gradient < 0 then do
+            let result = buyShares newKnown currMoney
+                updatedShares = if shAmt (bouSha result) /= 0 then resultState {sha = (bouSha result):shares} else resultState
 
-            traderBrain allRecords $ resultState {kn = remShares result, 
-            mony = (remMoney result), sha = (bouSha result):shares}
+            --knLength must be -1 as we remove a record when we buy
+            traderBrain allRecords $ updatedShares { 
+            money = (remMoney result)}
 
         --Otherwise just don't bother.
         else traderBrain allRecords $ resultState 
