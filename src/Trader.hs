@@ -6,11 +6,6 @@ module Trader (
 
 import Types
 import Data.Maybe
--- momentum :: OrderBookEntryList -> average -> numShares -> money -> returns (OrderBookEntryList, numShares, money)
---momentum :: [OrderBookEntry] -> Float -> Integer -> Float -> ([OrderBookEntry], Integer, Float)
---momentum oBookEntryList average shares money
---   | average > minSell = sell
---   | average < maxBuy = buy
 
 -- calcAverage :: orderBookEntryList -> currentIndex -> newAverage
 calcAverage :: [OrderBookEntry] -> Float -> Integer -> Float
@@ -18,9 +13,6 @@ calcAverage oBookEntryList oldAverage index
    | index < 0  = oldAverage
    | index < 10 = (sum' 10 index oBookEntryList) / 10
    | otherwise  = oldAverage - (fromMaybe 0 (price (oBookEntryList !! (fromIntegral (index - 10)))) / 10) + (fromMaybe 0 (price (oBookEntryList !! (fromIntegral index))) / 10)
---   | index > 10 && (length oBookEntryList) > index = (sum' 10 index oBookEntryList) `div` 10
---   | index > 10 && (length oBookEntryList) < index = (sum' 10 (length oBookEntryList) oBookEntryList) `div` 10
---   | index < 10 && (length oBookEntryList) > index = 
 
 sum' :: Integer -> Integer -> [OrderBookEntry] -> Float
 sum' 0 _ list = 0
@@ -56,7 +48,7 @@ traderBrain :: [OrderBookEntry] -> TraderState -> TraderState
 traderBrain [] result = result
 traderBrain (x:allRecords) current = do
    let newKnown = (kn current) ++ [x]
-       newLength = toInteger $ length newKnown
+       newLength = knLength current
        momentum = momtm current
 
        newMomentum = calcAverage newKnown momentum (newLength-1)
@@ -72,12 +64,11 @@ traderBrain (x:allRecords) current = do
         --We've reached a peak/valley. Buy or sell accordingly.
 
         --Sell everything we're worth. Assume we always succeed.
-        --if gradient >= 0 then traderBrain allRecords resultState {kn = newKnown, momtm = newMomentum, 
-        --                            mony = (money+shareVal(shares)), sha = [], his = histo ++ shares}
+        if gradient > 1.01 then traderBrain allRecords resultState {
+            mony = (money+shareVal(shares)), sha = [], his = histo ++ shares}
 
         --Buy as many shares as we can. Ideally from the cheapest source.
-        --else 
-        if gradient < 1 then do
+        else if gradient < 1 then do
             let result = buyShares newKnown money
 
             traderBrain allRecords $ resultState {kn = remShares result, 
