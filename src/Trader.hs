@@ -6,6 +6,8 @@ module Trader (
 
 import Types
 import Data.Maybe
+import Debug.Trace
+import Data.List
 
 -- calcAverage :: orderBookEntryList -> currentIndex -> newAverage
 calcAverage :: [OrderBookEntry] -> Float -> Integer -> Float
@@ -54,26 +56,27 @@ traderBrain (x:allRecords) current = do
        newMomentum = calcAverage newKnown momentum (newLength-1)
        secgradient = (calcAverage newKnown newMomentum (newLength-2))
        thrdgradient = (calcAverage newKnown secgradient (newLength-3))
-       gradient = (secgradient - thrdgradient)/thrdgradient
+       gradient = (secgradient - thrdgradient)
 
        resultState = current {kn = newKnown, knLength = newLength, momtm = newMomentum}
        shares = sha current
        histo = his current
        currMoney = money current
+
    if abs((newMomentum - momentum)/momentum) <= epsilon then
         --We've reached a peak/valley. Buy or sell accordingly.
 
         --Sell everything we're worth. Assume we always succeed.
-        if gradient >= 0 then do
+        if gradient > 0.0003 then do
             let sellUpdate = resultState {
-                money = (currMoney+shareVal(shares)), 
+                money = (currMoney+shareVal gradient (shares)), 
                 sha = [], his = histo ++ shares}
             traderBrain allRecords sellUpdate
 
         --Buy as many shares as we can. Ideally from the cheapest source.
-        else if gradient < 0 then do
-            let result = buyShares newKnown currMoney
-                updatedShares = if shAmt (bouSha result) /= 0 then resultState {sha = (bouSha result):shares} else resultState
+        else if gradient <= 0 then do
+            let result = buyShares' newKnown currMoney
+                updatedShares = if shAmt (bouSha result) /= 0 then resultState {sha = (bouSha result):shares, kn = remShares result, knLength = toInteger $ length $ remShares result} else resultState
 
             --knLength must be -1 as we remove a record when we buy
             traderBrain allRecords $ updatedShares { 
@@ -85,7 +88,7 @@ traderBrain (x:allRecords) current = do
         --Simply continue. We haven't reached anything noteworthy.
         traderBrain allRecords $ resultState 
     where        
-        shareVal orders = sum $ map (\x -> (shaPri x) * fromInteger (shAmt x)) orders
+        shareVal gradient orders = (1+gradient) * (sum $ map (\x -> (shaPri x) * fromInteger (shAmt x)) orders)
 
 data BoughtShares = BoughtShares { remShares :: [OrderBookEntry],
                 remMoney :: Float,
@@ -94,25 +97,46 @@ data BoughtShares = BoughtShares { remShares :: [OrderBookEntry],
 data Share = Share { shAmt :: Integer,
         shaPri :: Float } deriving (Show, Read, Eq)
 
-buyShares :: [OrderBookEntry] -> Float -> BoughtShares
-buyShares [] money = BoughtShares [] money $ Share 0 0
-buyShares xs money = BoughtShares ys extraMoney $ Share volToBuy cheapPrice
-   where cheapestAsk = findCheapestAsk (head xs) xs
-         ys = filter (\x -> x /= cheapestAsk) xs
-         cheapPrice = fromMaybe 999999999999999999999999999 (price cheapestAsk)
-         volToBuy = numCanBuy cheapPrice (fromMaybe 0 (volume cheapestAsk)) money
-         extraMoney = money - (cheapPrice * (fromInteger volToBuy))
+buyShares' :: [OrderBookEntry] -> Float -> BoughtShares
+buyShares' [] money = BoughtShares [] money $ Share 0 0
+buyShares' list money = do
+    let askList = filter ((/= True) . isBid . trans) list
+    if askList /= [] then do
+        let bestPrice = minimumBy (lowPrice) askList
+            bestPriceCost = maybe (0) (id) (price bestPrice)
+            canBuy = truncate $ money / bestPriceCost
+        if canBuy > 0 then do
+            let shareCost = (fromIntegral canBuy) * bestPriceCost
+                remainingMoney = money - shareCost
+                remainingList = delete bestPrice list 
+            BoughtShares remainingList remainingMoney $ Share (toInteger canBuy) bestPriceCost
+        else BoughtShares list money $ Share 0 0
+    else BoughtShares list money $ Share 0 0 
+    
+lowPrice fst snd
+     | (maybe (99999) (id) (price fst))  < (maybe (99999) (id) (price snd)) = LT
+     | (maybe (99999) (id) (price fst)) == (maybe (99999) (id) (price snd)) = EQ
+     | (maybe (99999) (id) (price fst))  > (maybe (99999) (id) (price snd)) = GT
 
-numCanBuy :: Float -> Integer -> Float -> Integer
-numCanBuy price amount money
-   | amount >= 0 && price * (fromInteger amount) <= money = amount
-   | otherwise = numCanBuy price (amount - 5) money
+--buyShares :: [OrderBookEntry] -> Float -> BoughtShares
+--buyShares [] money = BoughtShares [] money $ Share 0 0
+--buyShares xs money = BoughtShares ys extraMoney $ Share volToBuy cheapPrice
+--   where cheapestAsk = findCheapestAsk (head xs) xs
+--         ys = filter (\x -> x /= cheapestAsk) xs
+--         cheapPrice = fromMaybe 999999 (price cheapestAsk)
+--         volToBuy = numCanBuy cheapPrice (fromMaybe 0 (volume cheapestAsk)) money
+--         extraMoney = money - (cheapPrice * (fromInteger volToBuy))
+--
+--numCanBuy :: Float -> Integer -> Float -> Integer
+--numCanBuy price amount money
+--   | amount >= 0 && price * (fromInteger amount) <= money = amount
+--   | otherwise = numCanBuy price (amount - 5) money
 
-findCheapestAsk :: OrderBookEntry -> [OrderBookEntry] -> OrderBookEntry
-findCheapestAsk y [] = y
-findCheapestAsk y [x]
-   | not (isBid (fromMaybe (Bid 0 0) (trans x))) && (price x) < (price y) = x
-   | otherwise = y
-findCheapestAsk y (x:xs)
-   | not (isBid (fromMaybe (Bid 0 0) (trans x))) && (price x) < (price y) = findCheapestAsk x xs
-   | otherwise = findCheapestAsk y xs
+--findCheapestAsk :: OrderBookEntry -> [OrderBookEntry] -> OrderBookEntry
+--findCheapestAsk y [] = y
+--findCheapestAsk y [x]
+--   | not (isBid (fromMaybe (Bid 0 0) (trans x))) && (price x) < (price y) = x
+--   | otherwise = y
+--findCheapestAsk y (x:xs)
+--   | not (isBid (fromMaybe (Bid 0 0) (trans x))) && (price x) < (price y) = findCheapestAsk x xs
+--   | otherwise = findCheapestAsk y xs
