@@ -1,7 +1,6 @@
 module Trader (
     traderEntry, TraderState(money,his,sha),
-    defaultTraderState, traderBrain
-)
+    defaultTraderState, traderBrain, Share(shAmt,shaPri))
   where
 
 import Types
@@ -90,7 +89,7 @@ traderBrain (x:allRecords) current = do
         --Simply continue. We haven't reached anything noteworthy.
         traderBrain allRecords $ resultState 
     where        
-        shareVal gradient orders = (1+abs(gradient)) * (sum $ map (\x -> (shaPri x) * fromInteger (shAmt x)) orders)
+        shareVal gradient orders = (sum $ map (\x -> (0.0005 + shaPri x) * fromInteger (shAmt x)) orders)
 
 data BoughtShares = BoughtShares { remShares :: [OrderBookEntry],
                 remMoney :: Float,
