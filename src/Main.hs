@@ -5,7 +5,7 @@ import qualified Data.Vector as V
 import Data.Csv
 
 import Types
-import Orderbook
+--import Orderbook
 import Trader
 import Views
 
@@ -19,14 +19,14 @@ parse fields = either (putStrLn) (dataProcessing) fields
 dataProcessing :: (Header, V.Vector OrderBookEntry) -> IO()
 dataProcessing (head, fields) = do
     let allRecords = V.toList fields
-        cash = 1000
+        cash = 10000
         tradeRecords = traderEntry allRecords
-        tradeResult = traderBrain tradeRecords $ defaultTraderState {mony = cash}
+        tradeResult = traderBrain tradeRecords $ defaultTraderState {money = cash}
     putStrLn $ "The Trader was given : "++show(cash)
     putStrLn $ "The Trader ended up with:"
-    putStrLn $ show(mony tradeResult)++" in cash\n"
-    putStrLn $ "Held shares of:\n"
-    putStrLn $ "And had sold previously shares worth:\n"
+    putStrLn $ show(money tradeResult)++" in cash"
+    putStrLn $ "Holding "++show(length $ sha tradeResult)++" shares."
+    putStrLn $ "And had sold "++show(length $ his tradeResult)++" shares."
 
 
 --main = do
