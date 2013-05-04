@@ -5,7 +5,7 @@ module Types (
     getTrades, readF, writeF, doStuff, RecordType(TRADE,ENTER), recordType,
 
     -- types needed for Orderbook
-    OrderBookEntry, OrderBook(OrderBook), TransId(Bid,Ask), TradeLog,
+    OrderBookEntry, OrderBook(OrderBook), TransId(transTyp), TradeLog,
     time, price, volume, transId, orders, oldPrice, oldVolume, trans,
 	spread, isBid
 
@@ -50,16 +50,20 @@ data OrderBookEntry =
                          oldVolume :: Maybe Integer,
                          -- buyerBrokerId :: Maybe Integer, -- When bidAsk is A
                          -- sellerBrokerId :: Maybe Integer -- When bidAsk is B
-            trans :: Maybe TransId
+            trans :: TransId
         } deriving (Show, Read, Eq)
 
-data TransId =     Bid { bidId :: Integer, sellerBrokerId :: Integer }
-                | Ask { askId :: Integer, buyerBrokerId :: Integer } deriving (Show, Read, Eq)
+data Trans = Bid { bidId :: Integer, sellerBrokerId :: Integer }
+             | Ask { askId :: Integer, buyerBrokerId :: Integer } deriving (Show, Read, Eq)
 
-makeTrans :: Bool -> Maybe Integer -> Maybe Integer -> Maybe TransId
-makeTrans True (Just x) (Just y) = Just $ Bid x y
-makeTrans False (Just x) (Just y) = Just $ Ask x y
-makeTrans _ _ _ = Nothing
+data TransId = TransId { transTyp :: Char,
+                         transContents :: Maybe Trans} deriving (Show, Read, Eq)
+
+
+makeTrans :: Char -> Maybe Integer -> Maybe Integer -> TransId
+makeTrans 'B' (Just x) (Just y) = TransId 'B' (Just $ Bid x y)
+makeTrans 'A' (Just x) (Just y) = TransId 'A' (Just $ Ask x y)
+makeTrans x _ _ = TransId x Nothing
 
 (.:?) :: (FromField a) => NamedRecord -> B.ByteString -> Parser (Maybe a)
 obj .:? key = case HM.lookup key obj of
@@ -107,7 +111,7 @@ instance FromNamedRecord OrderBookEntry where
     oldV <- r.:> "Old Volume" 
     buye <- r.:> "Buyer Broker ID" 
     sell <- r.:> "Seller Broker ID"         
-    let tranElem = makeTrans isb (if isb then bid else ask) (if isb then sell else buye)
+    let tranElem = makeTrans (head bidAsk) (if isb then bid else ask) (if isb then sell else buye)
 
     return $ OrderBookEntry ins date time reco pric volu undi valu qual tran entr oldP oldV tranElem
     where
@@ -117,16 +121,15 @@ instance FromNamedRecord OrderBookEntry where
 
 instance ToNamedRecord OrderBookEntry where
 	toNamedRecord (OrderBookEntry inst dat tim recTyp pri vol undisVol val qual trId entryTim oldPri oldVol transElem) = namedRecord $ ["#Instrument" .= inst, "Date" .= show dat, "Time" .= tim, "Record Type" .= show recTyp, "Price" .= showMaybe pri, "Volume" .= showMaybe vol, "Undisclosed Volume" .= showMaybe undisVol, "Value" .= showMaybe val, "Qualifiers" .= qual, "Trans ID" .= show trId] ++ outputTransElem transElem ++ ["Entry Time" .= entryTim, "Old Price" .= showMaybe oldPri, "Old Volume" .= showMaybe oldVol]
-outputTransElem tr = maybe emptyTransElem bidAskTransElem tr
-bidAskTransElem tr = if (isBid tr) then (bidTransElem tr) else (askTransElem tr)
+outputTransElem tr = bidAskTransElem tr
+bidAskTransElem tr = if (isBid tr) then (maybe (emptyTransElem) (bidTransElem) (transContents tr)) else (maybe (emptyTransElem) (askTransElem) (transContents tr))
 bidTransElem (Bid b sell) = ["Bid ID" .= show b, "Ask ID" .= B.empty, "Bid/Ask" .= 'B', "Buyer Broker ID" .= B.empty, "Seller Broker ID" .= sell]
 askTransElem (Ask a buye) = ["Bid ID" .= B.empty, "Ask ID" .= show a, "Bid/Ask" .= 'A', "Buyer Broker ID" .= show buye, "Seller Broker ID" .= B.empty]
 emptyTransElem = ["Bid ID" .= B.empty, "Ask ID" .= B.empty, "Bid/Ask" .= B.empty, "Buyer Broker ID" .= B.empty, "Seller Broker ID" .= B.empty]
 showMaybe b = maybe "" (show) b
 
 isBid :: TransId -> Bool
-isBid (Bid _ _) = True
-isBid (Ask _ _) = False
+isBid (TransId x _) = x == 'B'
 
 data RecordType = AMEND | CANCEL_TRADE | DELETE | ENTER | OFFTR | TRADE deriving (Show, Read, Eq)
 
@@ -150,6 +153,6 @@ orderEntry :: [String] -> OrderBookEntry
 orderEntry (inst:dat:tim:recTyp:pri:vol:undisVol:val:qual:trId:bId:aId:ba:entryTim:oldPri:oldVol:buyerBrokId:sellerBrokId:[]) = OrderBookEntry inst (read dat) tim (read recTyp) (read pri) (read vol) (read undisVol) (read val) qual (read trId) entryTim (read oldPri) (read oldVol) transElem
     where
         isb = ba == "B"
-        transElem = makeTrans isb (if isb then return $ read bId else return $ read aId) (if isb then return $ read sellerBrokId else return $ read buyerBrokId)
+        transElem = makeTrans (head ba) (if isb then return $ read bId else return $ read aId) (if isb then return $ read sellerBrokId else return $ read buyerBrokId)
 orderEntry [] = error "orderEntry cannot take in an empty list! CSV file is not of a valid format!"
 orderEntry _ = error "orderEntry must take in exactly the right number of elements! CSV is invalid!"
