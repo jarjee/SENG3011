@@ -1,3 +1,4 @@
+import System.Environment
 import System.IO
 import Control.Monad
 import Data.List
@@ -22,11 +23,11 @@ dataProcessing (head, fields) = do
         cash = 10000
         tradeRecords = traderEntry allRecords
         tradeResult = traderBrain tradeRecords $ defaultTraderState {money = cash}
-    putStrLn $ "The Trader was given : "++show(cash)
+    putStrLn $ "The Trader was given : $"++show(cash)
     putStrLn $ "The Trader ended up with:"
-    putStrLn $ show(money tradeResult)++" in cash"
-    putStrLn $ "Holding "++show(length $ sha tradeResult)++" shares."
-    putStrLn $ "And had sold "++show(length $ his tradeResult)++" shares."
+    putStrLn $ '$':show(money tradeResult)
+    putStrLn $ "Holding "++show(length $ sha tradeResult)++" shares."-- ++show((sum $ map (\x -> (shaPri x) * fromInteger (shAmt x)) $ sha tradeResult))
+    putStrLn $ "And had sold "++show(length $ his tradeResult)++" shares."-- ++show((sum $ map (\x -> (shaPri x) * fromInteger (shAmt x)) $ his tradeResult))
 
 
 --main = do
