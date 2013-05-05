@@ -8,7 +8,10 @@ import Data.Maybe
 import Debug.Trace
 import Data.List
 
--- calcAverage :: orderBookEntryList -> currentIndex -> newAverage
+-- |This calculates a given average for a list of OrderBook Entries.
+-- We take in a float to allow us to calculate the moving average
+-- instead of needing to constantly recalculate from the entire list.
+-- The integer is the index of the 'average' that needs to be calculated.
 calcAverage :: [OrderBookEntry] -> Float -> Integer -> Float
 calcAverage oBookEntryList oldAverage index 
    | index < 0  = oldAverage
@@ -24,11 +27,14 @@ sum' amount index list
    | index >= (toInteger (length list)) = sum' amount (toInteger (length list - 1)) list
    | otherwise = (fromMaybe 0 (price (list !! (fromIntegral index)))) + (sum' (amount - 1) (index - 1) list)
 
---Takes in raw list of OrderBookEntry, filters so we only have ENTER entries
---Don't think we need to check for only unique entries (this is n^2, so I'd rather not)
+{- |Takes in raw list of OrderBookEntry, filters so we only have ENTER entries.
+    This is strictly a hack for getting the Trader submission in a useable state.
+    Don't think we need to check for only unique entries (this is n^2, so I'd rather not)
+-}
 traderEntry :: [OrderBookEntry] -> [OrderBookEntry]
 traderEntry list = filter ((== ENTER) . recordType) list
 
+-- |This is the constant used to deal with floating point errors when calculating the second derative.
 epsilon = 0.001
 
 data TraderState = 
@@ -41,18 +47,21 @@ data TraderState =
                    sha :: [Share]} 
                    deriving (Show, Read, Eq)
 
---Initialises a default traderState object so you don't have to.
+-- |Initialises a default traderState object so you don't have to.
 defaultTraderState = TraderState [] [] 0 0.0 0.0 [] []
 
---The function that runs a running tally of the momentum, currMoney available and shares held.
---This function is recursive and returns the result at the end.
+{- |This function handles the decision tree for given gradients.
+    More of the buying/selling logic can be seperated out, which will
+    not only improve code legibility but fuffil the requirement of
+    having multiple trading strategies within the code.
+-}
 traderBrain :: [OrderBookEntry] -> TraderState -> TraderState
 traderBrain [] result = result
 traderBrain (x:allRecords) current = do
    let newKnown = (kn current) ++ [x]
        newLength = (knLength current) + 1
        momentum = momtm current
-       newAskList = if (isBid (trans x) /= True) then sortBy (lowPrice) (x:knAsks current) else knAsks current
+       newAskList = if (isBid (trans x) /= True) then sortBy (priceComp) (x:knAsks current) else knAsks current
 
        newMomentum = calcAverage newKnown momentum (newLength-1)
        secgradient = (calcAverage newKnown newMomentum (newLength-2))
@@ -98,6 +107,11 @@ data BoughtShares = BoughtShares { remShares :: [OrderBookEntry],
 data Share = Share { shAmt :: Integer,
         shaPri :: Float } deriving (Show, Read, Eq)
 
+{-| This is a simple buying strategy that takes in a list of Asks and attempts buy as many items as possible.
+    It assumes that it can buy as many records as it wants and in its current form does not generate trade signals.
+    It also removes records once it finds a suitable match. The final version of this function will need to update
+    the entries according to the volume bought.
+-}
 buyShares' :: [OrderBookEntry] -> Float -> BoughtShares
 buyShares' [] money = BoughtShares [] money $ Share 0 0
 buyShares' list money = do
@@ -112,31 +126,9 @@ buyShares' list money = do
             BoughtShares remainingList remainingMoney $ Share (toInteger canBuy) bestPriceCost
         else BoughtShares list money $ Share 0 0
     else BoughtShares list money $ Share 0 0 
-    
-lowPrice fst snd
+
+-- | This function allows us to compare prices of records with one another for sorting
+priceComp fst snd
      | (maybe (99999) (id) (price fst))  < (maybe (99999) (id) (price snd)) = LT
      | (maybe (99999) (id) (price fst)) == (maybe (99999) (id) (price snd)) = EQ
      | (maybe (99999) (id) (price fst))  > (maybe (99999) (id) (price snd)) = GT
-
---buyShares :: [OrderBookEntry] -> Float -> BoughtShares
---buyShares [] money = BoughtShares [] money $ Share 0 0
---buyShares xs money = BoughtShares ys extraMoney $ Share volToBuy cheapPrice
---   where cheapestAsk = findCheapestAsk (head xs) xs
---         ys = filter (\x -> x /= cheapestAsk) xs
---         cheapPrice = fromMaybe 999999 (price cheapestAsk)
---         volToBuy = numCanBuy cheapPrice (fromMaybe 0 (volume cheapestAsk)) money
---         extraMoney = money - (cheapPrice * (fromInteger volToBuy))
---
---numCanBuy :: Float -> Integer -> Float -> Integer
---numCanBuy price amount money
---   | amount >= 0 && price * (fromInteger amount) <= money = amount
---   | otherwise = numCanBuy price (amount - 5) money
-
---findCheapestAsk :: OrderBookEntry -> [OrderBookEntry] -> OrderBookEntry
---findCheapestAsk y [] = y
---findCheapestAsk y [x]
---   | not (isBid (fromMaybe (Bid 0 0) (trans x))) && (price x) < (price y) = x
---   | otherwise = y
---findCheapestAsk y (x:xs)
---   | not (isBid (fromMaybe (Bid 0 0) (trans x))) && (price x) < (price y) = findCheapestAsk x xs
---   | otherwise = findCheapestAsk y xs
