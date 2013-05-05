@@ -66,14 +66,7 @@ makeTrans 'A' (Just x) (Just y) = TransId 'A' (Just $ Ask x y)
 makeTrans x _ _ = TransId x Nothing
 
 (.:?) :: (FromField a) => NamedRecord -> B.ByteString -> Parser (Maybe a)
-obj .:? key = case HM.lookup key obj of
-        Nothing -> pure Nothing
-        
-        Just v -> do
-            if (not $ B.null v) then 
-                Just <$> parseField (v)
-            else
-                pure Nothing
+obj .:? key = maybe (pure Nothing) (parseField) (HM.lookup key obj)
 
 readF :: String -> IO (Either String (Header, V.Vector OrderBookEntry))
 readF name = do
