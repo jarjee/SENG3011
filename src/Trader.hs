@@ -32,7 +32,7 @@ sum' amount index list
     Don't think we need to check for only unique entries (this is n^2, so I'd rather not)
 -}
 traderEntry :: [OrderBookEntry] -> [OrderBookEntry]
-traderEntry list = filter ((== ENTER) . recordType) list
+traderEntry list = filter ((== enter) . recordType) list
 
 -- |This is the constant used to deal with floating point errors when calculating the second derative.
 epsilon = 0.001
@@ -45,7 +45,7 @@ data TraderState =
                    money :: Float,
                    his :: [Share],
                    sha :: [Share]} 
-                   deriving (Show, Read, Eq)
+                   deriving (Show, Eq)
 
 -- |Initialises a default traderState object so you don't have to.
 defaultTraderState = TraderState [] [] 0 0.0 0.0 [] []
@@ -102,7 +102,7 @@ traderBrain (x:allRecords) current = do
 
 data BoughtShares = BoughtShares { remShares :: [OrderBookEntry],
                 remMoney :: Float,
-                bouSha :: Share} deriving (Show, Read, Eq)
+                bouSha :: Share} deriving (Show, Eq)
 
 data Share = Share { shAmt :: Integer,
         shaPri :: Float } deriving (Show, Read, Eq)

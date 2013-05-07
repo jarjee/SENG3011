@@ -1,8 +1,9 @@
-{-# LANGUAGE CPP, OverloadedStrings #-}
+{-# LANGUAGE CPP, OverloadedStrings, GeneralizedNewtypeDeriving #-}
 module Types (
 
     -- read/write etc
-    getTrades, readF, writeF, doStuff, RecordType(TRADE,ENTER), recordType,
+    getTrades, readF, writeF, doStuff, RecordType(..), recordType,
+    enter, trade,
 
     -- types needed for Orderbook
     OrderBookEntry, OrderBook(OrderBook), TransId(transTyp), TradeLog,
@@ -23,6 +24,16 @@ import qualified Data.HashMap.Lazy as HM
 import Data.Maybe
 
 -- types go here
+newtype RecordType = RecordType Int deriving (Show, Eq)
+(amend : cancel : delete : enter : offtr : trade : _) = map RecordType [1..] -- AMEND | CANCEL_TRADE | DELETE | ENTER | OFFTR | TRADE deriving (Show, Read, Eq)
+getType :: BL.ByteString -> RecordType
+getType "AMEND" = amend
+getType "CANCEL_TRADE" = cancel
+getType "DELETE" = delete
+getType "ENTER" = enter
+getType "OFFTR" = offtr
+getType "TRADE" = trade
+
 data OrderBook = OrderBook { orders :: ([OrderBookEntry], [OrderBookEntry]),
                             spread :: Float,
                             priceStep :: Float
@@ -51,7 +62,7 @@ data OrderBookEntry =
                          -- buyerBrokerId :: Maybe Integer, -- When bidAsk is A
                          -- sellerBrokerId :: Maybe Integer -- When bidAsk is B
             trans :: TransId
-        } deriving (Show, Read, Eq)
+        } deriving (Show, Eq)
 
 data Trans = Bid { bidId :: Integer, sellerBrokerId :: Integer }
              | Ask { askId :: Integer, buyerBrokerId :: Integer } deriving (Show, Read, Eq)
@@ -88,7 +99,7 @@ instance FromNamedRecord OrderBookEntry where
     ins <- r.: "#Instrument"
     date <- read <$> r.: "Date"
     time <- r.: "Time"
-    reco <- read <$> r.: "Record Type" 
+    reco <- getType <$> r.: "Record Type" 
     pric <- r.:> "Price" 
     volu <- r.:> "Volume" 
     undi <- r.:> "Undisclosed Volume" 
@@ -110,7 +121,7 @@ instance FromNamedRecord OrderBookEntry where
     where
         obj .:> key = do
             n <- obj .:? key
-            return $ read <$> n
+            return $ n
 
 instance ToNamedRecord OrderBookEntry where
 	toNamedRecord (OrderBookEntry inst dat tim recTyp pri vol undisVol val qual trId entryTim oldPri oldVol transElem) = namedRecord $ ["#Instrument" .= inst, "Date" .= show dat, "Time" .= tim, "Record Type" .= show recTyp, "Price" .= showMaybe pri, "Volume" .= showMaybe vol, "Undisclosed Volume" .= showMaybe undisVol, "Value" .= showMaybe val, "Qualifiers" .= qual, "Trans ID" .= show trId] ++ outputTransElem transElem ++ ["Entry Time" .= entryTim, "Old Price" .= showMaybe oldPri, "Old Volume" .= showMaybe oldVol]
@@ -124,7 +135,6 @@ showMaybe b = maybe "" (show) b
 isBid :: TransId -> Bool
 isBid (TransId x _) = x == 'B'
 
-data RecordType = AMEND | CANCEL_TRADE | DELETE | ENTER | OFFTR | TRADE deriving (Show, Read, Eq)
 
 split :: (a -> Bool) -> [a] -> [[a]] 
 split pr [] = []
@@ -143,9 +153,9 @@ getTrades handle = do
     map (orderEntry . split (==',')) records
 
 orderEntry :: [String] -> OrderBookEntry
-orderEntry (inst:dat:tim:recTyp:pri:vol:undisVol:val:qual:trId:bId:aId:ba:entryTim:oldPri:oldVol:buyerBrokId:sellerBrokId:[]) = OrderBookEntry inst (read dat) tim (read recTyp) (read pri) (read vol) (read undisVol) (read val) qual (read trId) entryTim (read oldPri) (read oldVol) transElem
-    where
-        isb = ba == "B"
-        transElem = makeTrans (head ba) (if isb then return $ read bId else return $ read aId) (if isb then return $ read sellerBrokId else return $ read buyerBrokId)
+--orderEntry (inst:dat:tim:recTyp:pri:vol:undisVol:val:qual:trId:bId:aId:ba:entryTim:oldPri:oldVol:buyerBrokId:sellerBrokId:[]) = OrderBookEntry inst (read dat) tim (read recTyp) (read pri) (read vol) (read undisVol) (read val) qual (read trId) entryTim (read oldPri) (read oldVol) transElem
+--    where
+--        isb = ba == "B"
+--        transElem = makeTrans (head ba) (if isb then return $ read bId else return $ read aId) (if isb then return $ read sellerBrokId else return $ read buyerBrokId)
 orderEntry [] = error "orderEntry cannot take in an empty list! CSV file is not of a valid format!"
 orderEntry _ = error "orderEntry must take in exactly the right number of elements! CSV is invalid!"
