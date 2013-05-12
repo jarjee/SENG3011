@@ -33,6 +33,7 @@ getType "DELETE" = delete
 getType "ENTER" = enter
 getType "OFFTR" = offtr
 getType "TRADE" = trade
+getType x = error $ "Invalid record type:"++show(x)
 
 data OrderBook = OrderBook { orders :: ([OrderBookEntry], [OrderBookEntry]),
                             spread :: Float,
