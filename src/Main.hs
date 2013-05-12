@@ -24,7 +24,7 @@ process arg = do
     parse (MainInput (read $ arg !! 1) (arg !! 2) (arg !! 3)) file
 
 parse :: MainInput -> Either String (Header, V.Vector OrderBookEntry) -> IO()
-parse input fields = either (putStrLn) (dataProcessing input) fields
+parse input fields = either (\x -> putStrLn "Failed to parse the provided file.\nPlease check for corruption.") (dataProcessing input) fields
 
 dataProcessing :: MainInput -> (Header, V.Vector OrderBookEntry) -> IO()
 dataProcessing input (head, fields) = do
