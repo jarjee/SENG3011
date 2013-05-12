@@ -10,18 +10,27 @@ import Types
 import Trader
 import Views
 
+data MainInput = MainInput { inputCash :: Float,
+                             buyAlg :: String,
+                             sellAlg :: String} deriving (Show, Read)
+
 main = do
-	csv <- Types.readF "input.csv"
-	parse csv
+    args <- getArgs
+    if (length args == 4) then process args else putStrLn "Please give FileName Money BuyAlgorithm SellAlgorithm"
 
-parse :: Either String (Header, V.Vector OrderBookEntry) -> IO()
-parse fields = either (putStrLn) (dataProcessing) fields
+process :: [String] -> IO()
+process arg = do
+    file <- readF $ head arg
+    parse (MainInput (read $ arg !! 1) (arg !! 2) (arg !! 3)) file
 
-dataProcessing :: (Header, V.Vector OrderBookEntry) -> IO()
-dataProcessing (head, fields) = do
+parse :: MainInput -> Either String (Header, V.Vector OrderBookEntry) -> IO()
+parse input fields = either (putStrLn) (dataProcessing input) fields
+
+dataProcessing :: MainInput -> (Header, V.Vector OrderBookEntry) -> IO()
+dataProcessing input (head, fields) = do
     let allRecords = V.toList fields
-        cash = 10000
-        tradeRecords = traderEntry allRecords
+        cash = inputCash input
+        tradeRecords = traderEntry $ allRecords
         tradeResult = traderBrain tradeRecords $ defaultTraderState {money = cash}
     putStrLn $ "The Trader was given : $"++show(cash)
     putStrLn $ "The Trader ended up with:"
