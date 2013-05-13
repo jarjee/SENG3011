@@ -6,7 +6,7 @@ module Trader (
 import Types
 import Data.Maybe
 import Debug.Trace
-import Data.List
+import Data.List as L
 
 -- |This calculates a given average for a list of OrderBook Entries.
 -- We take in a float to allow us to calculate the moving average
@@ -122,7 +122,7 @@ buyShares' list money = do
         if canBuy > 0 then do
             let shareCost = (fromIntegral canBuy) * bestPriceCost
                 remainingMoney = money - shareCost
-                remainingList = delete bestPrice list 
+                remainingList = L.delete bestPrice list 
             BoughtShares remainingList remainingMoney $ Share (toInteger canBuy) bestPriceCost
         else BoughtShares list money $ Share 0 0
     else BoughtShares list money $ Share 0 0 

@@ -1,3 +1,4 @@
+module Orderbook where
 import Types as T
 import Data.HashMap as M
 import Data.Heap as H
@@ -53,7 +54,16 @@ deleteOrderBook entry state = do
         state {sellRecords = newMap, sellPrices = newHeap}
 
 amendOrderBook :: OrderBookEntry -> OrderBookState -> OrderBookState
-amendOrderBook entry state = state
+amendOrderBook entry state = do
+    let idNum = getId entry
+    if (isBid entry) then do
+        let newMap = M.insert idNum entry $ buyRecords state
+            newHeap = makePriceHeap newMap
+        state {buyRecords = newMap, buyPrices = newHeap}
+    else do
+        let newMap = M.insert idNum entry $ sellRecords state 
+            newHeap = makePriceHeap newMap 
+        state {sellRecords = newMap, sellPrices = newHeap}
 
 makePriceHeap newMap = H.fromList $ Prelude.map (\(x,y) -> (maybe (0) (id) (price y),y)) $ M.toList newMap
 
