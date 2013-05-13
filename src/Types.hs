@@ -120,7 +120,7 @@ instance FromNamedRecord OrderBookEntry where
     oldV <- r.:> "Old Volume" 
     buye <- r.:> "Buyer Broker ID" 
     sell <- r.:> "Seller Broker ID"         
-    let tranElem = makeTrans (head bidAsk) (if isb then bid else ask) (if isb then sell else buye)
+    let tranElem = makeTrans (if (null bidAsk) then ' ' else head bidAsk) (if isb then bid else ask) (if isb then sell else buye)
 
     return $ OrderBookEntry ins date time reco pric volu undi valu qual tran entr oldP oldV tranElem
     where
