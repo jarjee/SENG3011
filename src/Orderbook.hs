@@ -1,4 +1,4 @@
-import Types
+import Types as T
 import Data.HashMap as M
 import Data.Heap as H
 import Data.Vector as V
@@ -17,20 +17,18 @@ data OrderBookState = OrderBookState { entriesNum :: Integer,
 defaultOrderBookState = OrderBookState 0 0 V.empty M.empty M.empty H.empty H.empty
 
 updateOrderBook :: OrderBookEntry -> OrderBookState -> OrderBookState
-updateOrderBook entry state = do
-    let newEntries = (entriesNum state)+1
+updateOrderBook entry state
+    | (recordType entry) == T.enter = enterOrderBook entry result
+    | (recordType entry) == T.delete = deleteOrderBook entry result
+    | otherwise = error "Not valid type"
+    where
+        newEntries = (entriesNum state)+1
         result = calculateAverage entry state {entriesNum = newEntries}
-    if (recordType entry == enter)
-       then enterOrderBook entry result
-    else if (recordType entry == delete)
-        then deleteOrderBook entry result
-    else error "Hello!"
-   
+
 enterOrderBook :: OrderBookEntry -> OrderBookState -> OrderBookState
 enterOrderBook entry state = do
     let idNum = getId entry
         entryPri = maybe (0) (id) (price entry)
-    --Currently assumes everything is an enter, so only entering data.
     if (isBid entry) then do --Do data processing for Bids
         let newMap = M.insert idNum entry $ buyRecords state
             newHeap = H.insert (entryPri, entry) $ buyPrices state
@@ -41,7 +39,16 @@ enterOrderBook entry state = do
         state {sellRecords = newMap, sellPrices = newHeap}
 
 deleteOrderBook :: OrderBookEntry -> OrderBookState -> OrderBookState
-deleteOrderBook entry state = state
+deleteOrderBook entry state = do
+    let idNum = getId entry
+    if (isBid entry) then do
+        let newMap = M.delete (getId entry) (buyRecords state)
+            newHeap = H.fromList $ Prelude.map (\(x,y) -> (maybe (0) (id) (price y),y)) $ M.toList newMap
+        state {buyRecords = newMap, buyPrices = newHeap}
+    else do
+        let newMap = M.delete (getId entry) (sellRecords state)
+            newHeap = H.fromList $ Prelude.map (\(x,y) -> (maybe (0) (id) (price y),y)) $ M.toList newMap
+        state {sellRecords = newMap, sellPrices = newHeap}
 
 calculateAverage :: OrderBookEntry -> OrderBookState -> OrderBookState
 calculateAverage entry state = do
