@@ -1,151 +1,60 @@
-module Orderbook (processOrderbook, amendOrderPrice, amendOrderVolume, calculateSpread, calculatePriceStep) where
-
 import Types
-import Data.List
-import Data.Function
-import Data.Functor
-import Control.Applicative
-import Data.Maybe
+import Data.HashMap as M
+import Data.Heap as H
+import Data.Vector as V
 
+averageRes = 10
 
------------------------------------------------------------------------------
-------------------- IMPORTANT NOTES FOR THIS MODULE -------------------------
------------------------------------------------------------------------------
+data OrderBookState = OrderBookState { entriesNum :: Integer,
+                                       average :: Double,
+                                       lastSamples :: Vector Double,
+                                       buyRecords :: Map Integer OrderBookEntry,
+                                       sellRecords :: Map Integer OrderBookEntry,
+                                       buyPrices :: MaxPrioHeap Double OrderBookEntry,
+                                       sellPrices :: MinPrioHeap Double OrderBookEntry }
+                                       deriving (Eq, Show)
 
--- amend order does not update the time stamp at this stage
--- volume and price amends can be combined for later release (but I am not smart enough now)
+defaultOrderBookState = OrderBookState 0 0 V.empty M.empty M.empty H.empty H.empty
 
--- very little checking for empty things, need to dicuss and add
+updateOrderBook :: OrderBookEntry -> OrderBookState -> OrderBookState
+updateOrderBook entry state = do
+    let newEntries = (entriesNum state)+1
+        result = calculateAverage entry state {entriesNum = newEntries}
+    if (recordType entry == enter)
+       then enterOrderBook entry result
+    else if (recordType entry == delete)
+        then deleteOrderBook entry result
+    else error "Hello!"
+   
+enterOrderBook :: OrderBookEntry -> OrderBookState -> OrderBookState
+enterOrderBook entry state = do
+    let idNum = getId entry
+        entryPri = maybe (0) (id) (price entry)
+    --Currently assumes everything is an enter, so only entering data.
+    if (isBid entry) then do --Do data processing for Bids
+        let newMap = M.insert idNum entry $ buyRecords state
+            newHeap = H.insert (entryPri, entry) $ buyPrices state
+        state {buyRecords = newMap, buyPrices = newHeap}
+    else do --Do data processing for Asks
+        let newMap = M.insert idNum entry $ sellRecords state
+            newHeap = H.insert (entryPri, entry) $ sellPrices state
+        state {sellRecords = newMap, sellPrices = newHeap}
 
--- order tuple goes (bids, asks)
+deleteOrderBook :: OrderBookEntry -> OrderBookState -> OrderBookState
+deleteOrderBook entry state = state
 
------------------------------------------------------------------------------
-------------------- AMMEND AN ORDER BOOK ENTRY ------------------------------
------------------------------------------------------------------------------
-
--- TYPE 1: price
-
--- ammendOrderPrice :: OrderBook -> Integer -> Float -> OrderBook
-amendOrderPrice orderbook orderID newPrice  = undefined
-
--- runs compare over each order in the bid and ask lists
-findPriceOrder orderbook price orderID = do
-	map (comparePrice price orderID) (fst (orders orderbook) )
-	map (comparePrice price orderID) (snd (orders orderbook) )
-
--- compare order id to order to see if its the one				
-comparePrice price orderID order = if ((transId order) == orderID)
-									then ammendPrice order price	
-									else order
-							
--- set old price to current price, set price to new price
-ammendPrice order newPrice = changeNewPrice (changePrice order) newPrice
-								
-changePrice order = order {oldPrice = (price order)}
-								
-changeNewPrice order newPrice = order {price = newPrice}
-
---------------------------------------------------------------------------------
-
--- TYPE 2: volume									
-
--- ammendOrderVolume :: OrderBook -> Integer -> Integer -> OrderBook
-amendOrderVolume orderbook orderID newVol = undefined
-
--- runs compare over each order in the bid and ask lists
-findVolOrder orderbook vol orderID = do
-										map (compareVol vol orderID) (fst (orders orderbook) )
-										map (compareVol vol orderID) (snd (orders orderbook) )
-
--- compare order id to order to see if its the one				
-compareVol vol orderID order = if ((transId order) == orderID)
-								then ammendVol order vol	
-								else order
-
--- set old volume to current volume, set volume to new volume
-ammendVol order newVol = changeNewVol (changeVol  order) newVol
-
-changeVol order = order {oldVolume = (volume order)}
-							
-changeNewVol order newVol = order {volume = newVol}
-
-								
---------------------------------------------------------------------------------
---------------FUNCTIONS COMMON TO AMMENDVOLUME AND AMMENDPRICE------------------
---------------------------------------------------------------------------------									
-																	
--- sort ammended orderbook
-sortNewOrder orderbook = processOrderbook (fst (orders orderbook) ++ snd (orders orderbook) )
-
--------------------------------------------------------------------------------------
----------------------------- DELETE AN ORDER BOOK ENTRY -----------------------------
--------------------------------------------------------------------------------------
-
---clearOrderBook orderId orderbook = deleteOrder orderId (snd (orders (deleteOrder orderId (fst (orders orderbook))) ) )
-
---deleteOrder :: Integer -> [OrderBookEntry] -> [OrderBookEntry]
---deleteOrder orderId orders = filter ((/= orderId) . transId) orders
-
-------------------------------------------------------------------------------
--------- PROCESSING OF ORDER BOOK ENTRIES TO FORM A SORTED ORDERBOOK ---------
-------------------------------------------------------------------------------
-
--- STEP 1: Split list of orders into bids and asks
-
-splitOrders :: [OrderBookEntry] -> ([OrderBookEntry], [OrderBookEntry])
-splitOrders [] = ([], [])
-splitOrders (x : xs)
-	|(fmap (isBid) $ trans x) == (Just True) = (x : bid, ask)
-	|(fmap (isBid) $ trans x) == (Just False) = (bid, x : ask)
-	|otherwise = (bid, ask)
-             where
-               (bid, ask) = splitOrders xs
--------------------------------------------------------------------------------
-
--- STEP 2: Sort orders on time and price criteria
-
-sortBidsAsks :: ([OrderBookEntry], [OrderBookEntry]) -> ([OrderBookEntry], [OrderBookEntry])
-sortBidsAsks orders = ( sortBids (fst orders), 
-                     					sortAsks (snd orders) )
-
-sortBids :: [OrderBookEntry] -> [OrderBookEntry]
-sortBids bids = sortBy bidOrderingPrice (sortBy bidOrderingTime bids)
-
-bidOrderingPrice a b    | (price a) > (price b) = GT
-						| otherwise = LT
-bidOrderingTime a b   	| (time a) < (time b) = GT
-						| otherwise = LT
-						
-						
-sortAsks :: [OrderBookEntry] -> [OrderBookEntry]
-sortAsks asks = sortBy askOrderingPrice (sortBy askOrderingTime asks) 
-
-askOrderingPrice a b    | (price a) < (price b) = GT
-						| otherwise = LT
-askOrderingTime a b   	| (time a) < (time b) = GT
-						| otherwise = LT
-
--------------------------------- -------------------------------------------------
-
--- STEP 3: Calculate stats (spread and price step)
-
-calculateSpread :: ([OrderBookEntry], [OrderBookEntry]) -> Float
-calculateSpread orders
-	| ((-) <$> (price bid) <*> (price ask)) == Nothing = 0
-	| otherwise = abs(fromJust $ (-) <$> (price bid) <*> (price ask))
-	where bid = head $ fst orders
-	      ask = head $ snd orders
-
-calculatePriceStep :: ([OrderBookEntry], [OrderBookEntry]) -> Float
-calculatePriceStep = undefined
--- still not 100% sure what this step business is
-
----------------------------------------------------------------------------------
-
--- STEP 4: Bring it all together into an OrderBook
-
--- processOrderBook :: [OrderBookEntry] -> OrderBook
-processOrderbook orders = OrderBook (sortBidsAsks (splitOrders orders))
-										(calculateSpread (sortBidsAsks (splitOrders orders)))
-											(calculatePriceStep (sortBidsAsks (splitOrders orders)))
-------------------------------------------------------------------------------------
+calculateAverage :: OrderBookEntry -> OrderBookState -> OrderBookState
+calculateAverage entry state = do
+    let lenVal = V.length $ lastSamples state
+        val = maybe 0 id (price $ entry)
+        removeVal = V.last $ lastSamples state
+        newVector = V.cons val $ if (lenVal >= averageRes) then V.init $ lastSamples state else lastSamples state
+        divisor = fromIntegral averageRes
+        lenDiv = fromIntegral lenVal
+        result = state {lastSamples = newVector}
+    if (lenVal < averageRes) then do
+        let newAverage = ((average state) * (lenDiv - 1) + val)/if (lenDiv > 0) then lenDiv else 1
+        result {average = newAverage}
+    else do
+        let newAverage = (average state) - (removeVal/divisor) + (val/divisor)
+        result {average = newAverage}

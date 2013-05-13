@@ -6,7 +6,7 @@ module Types (
     enter, trade,
 
     -- types needed for Orderbook
-    OrderBookEntry, OrderBook(OrderBook), TransId(transTyp), TradeLog,
+    OrderBookEntry, getId, OrderBook(OrderBook), TransId(transTyp), TradeLog,
     time, price, volume, transId, orders, oldPrice, oldVolume, trans,
 	spread, isBid
 
@@ -24,7 +24,7 @@ import qualified Data.HashMap.Lazy as HM
 import Data.Maybe
 
 -- types go here
-newtype RecordType = RecordType Int deriving (Show, Eq)
+newtype RecordType = RecordType Int deriving (Show, Eq, Ord)
 (amend : cancel : delete : enter : offtr : trade : _) = map RecordType [1..] -- AMEND | CANCEL_TRADE | DELETE | ENTER | OFFTR | TRADE deriving (Show, Read, Eq)
 getType :: BL.ByteString -> RecordType
 getType "AMEND" = amend
@@ -49,7 +49,7 @@ data OrderBookEntry =
                          date :: Integer,
                          time :: String,
                          recordType :: RecordType,
-                         price :: Maybe Float,
+                         price :: Maybe Double,
                          volume :: Maybe Integer,
                          undisclosedVolume :: Maybe Integer,
                          value :: Maybe Float,
@@ -62,20 +62,24 @@ data OrderBookEntry =
                          oldVolume :: Maybe Integer,
                          -- buyerBrokerId :: Maybe Integer, -- When bidAsk is A
                          -- sellerBrokerId :: Maybe Integer -- When bidAsk is B
-            trans :: TransId
-        } deriving (Show, Eq)
+                        trans :: TransId
+        } deriving (Show, Eq, Ord)
 
-data Trans = Bid { bidId :: Integer, sellerBrokerId :: Integer }
-             | Ask { askId :: Integer, buyerBrokerId :: Integer } deriving (Show, Read, Eq)
+data Trans = Bid { bidId :: Integer, sellerBrokerId :: Maybe Integer }
+             | Ask { askId :: Integer, buyerBrokerId :: Maybe Integer } deriving (Show, Read, Eq, Ord)
 
 data TransId = TransId { transTyp :: Char,
-                         transContents :: Maybe Trans} deriving (Show, Read, Eq)
+                         transContents :: Trans} deriving (Show, Read, Eq, Ord)
 
+getId :: OrderBookEntry -> Integer
+getId entry = if (isBid entry) 
+                 then bidId $ transContents $ trans entry 
+                 else askId $ transContents$ trans entry
 
 makeTrans :: Char -> Maybe Integer -> Maybe Integer -> TransId
-makeTrans 'B' (Just x) (Just y) = TransId 'B' (Just $ Bid x y)
-makeTrans 'A' (Just x) (Just y) = TransId 'A' (Just $ Ask x y)
-makeTrans x _ _ = TransId x Nothing
+makeTrans 'B' (Just x) y = TransId 'B' (Bid x y)
+makeTrans 'A' (Just x) y = TransId 'A' (Ask x y)
+makeTrans x _ _ = error $ "Cannot match record of type :"++show(x)++" with missing data."
 
 (.:?) :: (FromField a) => NamedRecord -> B.ByteString -> Parser (Maybe a)
 obj .:? key = maybe (pure Nothing) (parseField) (HM.lookup key obj)
@@ -127,15 +131,17 @@ instance FromNamedRecord OrderBookEntry where
 instance ToNamedRecord OrderBookEntry where
 	toNamedRecord (OrderBookEntry inst dat tim recTyp pri vol undisVol val qual trId entryTim oldPri oldVol transElem) = namedRecord $ ["#Instrument" .= inst, "Date" .= show dat, "Time" .= tim, "Record Type" .= show recTyp, "Price" .= showMaybe pri, "Volume" .= showMaybe vol, "Undisclosed Volume" .= showMaybe undisVol, "Value" .= showMaybe val, "Qualifiers" .= qual, "Trans ID" .= show trId] ++ outputTransElem transElem ++ ["Entry Time" .= entryTim, "Old Price" .= showMaybe oldPri, "Old Volume" .= showMaybe oldVol]
 outputTransElem tr = bidAskTransElem tr
-bidAskTransElem tr = if (isBid tr) then (maybe (emptyTransElem) (bidTransElem) (transContents tr)) else (maybe (emptyTransElem) (askTransElem) (transContents tr))
-bidTransElem (Bid b sell) = ["Bid ID" .= show b, "Ask ID" .= B.empty, "Bid/Ask" .= 'B', "Buyer Broker ID" .= B.empty, "Seller Broker ID" .= sell]
-askTransElem (Ask a buye) = ["Bid ID" .= B.empty, "Ask ID" .= show a, "Bid/Ask" .= 'A', "Buyer Broker ID" .= show buye, "Seller Broker ID" .= B.empty]
+bidAskTransElem tr = if (isBidTr tr) then (bidTransElem) (transContents tr) else (askTransElem) (transContents tr)
+bidTransElem (Bid b sell) = ["Bid ID" .= show b, "Ask ID" .= B.empty, "Bid/Ask" .= 'B', "Buyer Broker ID" .= B.empty, "Seller Broker ID" .= show (maybe ("") (show) sell)]
+askTransElem (Ask a buye) = ["Bid ID" .= B.empty, "Ask ID" .= show a, "Bid/Ask" .= 'A', "Buyer Broker ID" .= (maybe ("") (show) buye), "Seller Broker ID" .= B.empty]
 emptyTransElem = ["Bid ID" .= B.empty, "Ask ID" .= B.empty, "Bid/Ask" .= B.empty, "Buyer Broker ID" .= B.empty, "Seller Broker ID" .= B.empty]
 showMaybe b = maybe "" (show) b
 
-isBid :: TransId -> Bool
-isBid (TransId x _) = x == 'B'
+isBidTr :: TransId -> Bool
+isBidTr (TransId x _) = x == 'B'
 
+isBid :: OrderBookEntry -> Bool
+isBid entry = (transTyp $ trans entry) == 'B'
 
 split :: (a -> Bool) -> [a] -> [[a]] 
 split pr [] = []
