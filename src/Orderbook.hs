@@ -72,3 +72,16 @@ calculateAverage entry state = do
     else do
         let newAverage = (average state) - (removeVal/divisor) + (val/divisor)
         result {average = newAverage}
+
+-- for the moment even if there's left over volume just delete
+-- gets passed OrderBookEntry and OrderBookState
+-- guaranteed to always be given a trade
+tradeOrderBook :: OrderBookEntry -> OrderBookState -> OrderBookState
+tradeOrderBook entry state = do
+    let aID = askId $ transContents $ trans entry
+        bID = bidId $ transContents $ trans entry
+        newBMap = M.delete bID (buyRecords state)
+        newAMap = M.delete aID (sellRecords state)
+        newBHeap = makePriceHeap newBMap
+        newAHeap = makePriceHeap newAMap
+    state {buyRecords = newBMap, buyPrices = newBHeap, sellRecords = newAMap, sellPrices = newAHeap}
