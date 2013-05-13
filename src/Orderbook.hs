@@ -18,12 +18,14 @@ defaultOrderBookState = OrderBookState 0 0 V.empty M.empty M.empty H.empty H.emp
 
 updateOrderBook :: OrderBookEntry -> OrderBookState -> OrderBookState
 updateOrderBook entry state
-    | (recordType entry) == T.enter = enterOrderBook entry result
-    | (recordType entry) == T.delete = deleteOrderBook entry result
-    | otherwise = error "Not valid type"
+    | typ == T.enter = enterOrderBook entry result
+    | typ == T.delete = deleteOrderBook entry result
+    | typ == T.amend = amendOrderBook entry result
+    | otherwise = state
     where
         newEntries = (entriesNum state)+1
         result = calculateAverage entry state {entriesNum = newEntries}
+        typ = recordType entry
 
 enterOrderBook :: OrderBookEntry -> OrderBookState -> OrderBookState
 enterOrderBook entry state = do
@@ -43,12 +45,17 @@ deleteOrderBook entry state = do
     let idNum = getId entry
     if (isBid entry) then do
         let newMap = M.delete (getId entry) (buyRecords state)
-            newHeap = H.fromList $ Prelude.map (\(x,y) -> (maybe (0) (id) (price y),y)) $ M.toList newMap
+            newHeap = makePriceHeap newMap
         state {buyRecords = newMap, buyPrices = newHeap}
     else do
         let newMap = M.delete (getId entry) (sellRecords state)
-            newHeap = H.fromList $ Prelude.map (\(x,y) -> (maybe (0) (id) (price y),y)) $ M.toList newMap
+            newHeap = makePriceHeap newMap
         state {sellRecords = newMap, sellPrices = newHeap}
+
+amendOrderBook :: OrderBookEntry -> OrderBookState -> OrderBookState
+amendOrderBook entry state = state
+
+makePriceHeap newMap = H.fromList $ Prelude.map (\(x,y) -> (maybe (0) (id) (price y),y)) $ M.toList newMap
 
 calculateAverage :: OrderBookEntry -> OrderBookState -> OrderBookState
 calculateAverage entry state = do
