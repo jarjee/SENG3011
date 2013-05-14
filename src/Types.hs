@@ -3,7 +3,7 @@ module Types (
 
     -- read/write etc
     getTrades, readF, writeF, doStuff, RecordType(..), recordType,
-    enter, trade, amend, delete, cancel, offtr,
+    enter, trade, amend, delete, cancel, offtr, orderEntry,
 
     -- types needed for Orderbook
     OrderBookEntry, getId, TransId(transTyp),
@@ -15,6 +15,7 @@ module Types (
 import Control.Applicative
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString as B
+import Data.ByteString.Char8 as C8 (pack)
 import Data.Csv
 import qualified Data.Vector as V
 import qualified Data.HashMap.Lazy as HM
@@ -26,7 +27,7 @@ import Data.Maybe
 -- types go here
 newtype RecordType = RecordType Int deriving (Show, Eq, Ord)
 (amend : cancel : delete : enter : offtr : trade : _) = map RecordType [1..] -- AMEND | CANCEL_TRADE | DELETE | ENTER | OFFTR | TRADE deriving (Show, Read, Eq)
-getType :: BL.ByteString -> RecordType
+getType :: B.ByteString -> RecordType
 getType "AMEND" = amend
 getType "CANCEL_TRADE" = cancel
 getType "DELETE" = delete
@@ -145,15 +146,18 @@ dropPred :: (a -> Bool) -> [a] -> [a]
 dropPred _ [] = []
 dropPred pr (x:xs) = if pr x then xs else x:dropPred pr xs
 
+fixLen l = if (length l < 18) then fixLen (l++[""]) else l
+
 getTrades :: String -> [OrderBookEntry]
 getTrades handle = do
-    let records = lines handle
-    map (orderEntry . split (==',')) records
+    let records = tail $ lines handle
+    map (orderEntry . fixLen . split (==',')) records
 
 orderEntry :: [String] -> OrderBookEntry
---orderEntry (inst:dat:tim:recTyp:pri:vol:undisVol:val:qual:trId:bId:aId:ba:entryTim:oldPri:oldVol:buyerBrokId:sellerBrokId:[]) = OrderBookEntry inst (read dat) tim (read recTyp) (read pri) (read vol) (read undisVol) (read val) qual (read trId) entryTim (read oldPri) (read oldVol) transElem
---    where
---        isb = ba == "B"
---        transElem = makeTrans (head ba) (if isb then return $ read bId else return $ read aId) (if isb then return $ read sellerBrokId else return $ read buyerBrokId)
+orderEntry (inst:dat:tim:recTyp:pri:vol:undisVol:val:qual:trId:bId:aId:ba:entryTim:oldPri:oldVol:buyerBrokId:sellerBrokId:[]) = OrderBookEntry inst (read dat) tim (getType $ C8.pack recTyp) (maybeRead pri) (maybeRead vol) (maybeRead undisVol) (maybeRead val) qual (read trId) entryTim (maybeRead oldPri) (maybeRead oldVol) transElem
+    where
+        isb = ba == "B"
+        transElem = makeTrans (head ba) (if isb then maybeRead bId else maybeRead aId) (if isb then maybeRead sellerBrokId else maybeRead buyerBrokId)
+        maybeRead p = if p == "" then Nothing else Just $ read p
 orderEntry [] = error "orderEntry cannot take in an empty list! CSV file is not of a valid format!"
 orderEntry _ = error "orderEntry must take in exactly the right number of elements! CSV is invalid!"
