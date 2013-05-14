@@ -3,25 +3,34 @@ import Types as T
 import Data.HashMap as M
 import Data.Heap as H
 import Data.Vector as V
+import Control.Applicative
 
 averageRes = 10
 
-data OrderBookState = OrderBookState { entriesNum :: Integer,
-                                       average :: Double,
-                                       lastSamples :: Vector Double,
-                                       buyRecords :: Map Integer OrderBookEntry,
-                                       sellRecords :: Map Integer OrderBookEntry,
-                                       buyPrices :: MaxPrioHeap Double OrderBookEntry,
-                                       sellPrices :: MinPrioHeap Double OrderBookEntry }
-                                       deriving (Eq, Show)
+data OrderBookState = OrderBookState 
+       { entriesNum :: Integer,
+        average :: Double,
+        lastSamples :: Vector Double,
+        buyRecords :: Map Integer OrderBookEntry,
+        sellRecords :: Map Integer OrderBookEntry,
+        buyPrices :: MaxPrioHeap Double OrderBookEntry,
+        sellPrices :: MinPrioHeap Double OrderBookEntry }
+        deriving (Eq, Show)
 
 defaultOrderBookState = OrderBookState 0 0 V.empty M.empty M.empty H.empty H.empty
 
+{-
+    Currently we make some estimations which affect the accuracy of this
+    simulation. Enter is fine, as is delete, but amend is supposed to change
+    the order of the entries and trade is supposed to be generated internally,
+    not actually processed by our trading algorithm
+-}
 updateOrderBook :: OrderBookEntry -> OrderBookState -> OrderBookState
 updateOrderBook entry state
     | typ == T.enter = enterOrderBook entry result
     | typ == T.delete = deleteOrderBook entry result
     | typ == T.amend = amendOrderBook entry result
+    | typ == T.trade = tradeOrderBook entry result
     | otherwise = state
     where
         newEntries = (entriesNum state)+1
@@ -88,8 +97,8 @@ calculateAverage entry state = do
 -- guaranteed to always be given a trade
 tradeOrderBook :: OrderBookEntry -> OrderBookState -> OrderBookState
 tradeOrderBook entry state = do
-    let aID = askId $ transContents $ trans entry
-        bID = bidId $ transContents $ trans entry
+    let aID = maybe (0) (id) $ askId <$> transContents <$> trans entry
+        bID = maybe (0) (id) $ bidId <$> transContents <$> trans entry
         newBMap = M.delete bID (buyRecords state)
         newAMap = M.delete aID (sellRecords state)
         newBHeap = makePriceHeap newBMap
