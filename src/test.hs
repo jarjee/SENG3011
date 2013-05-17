@@ -43,12 +43,14 @@ prop_CalcSpread bidPrice askPrice =
         askEntry = makeTestAsk askPrice
         state = makeTestState bidEntry askEntry
 
+{-
 prop_tradeOrderBook price =
     tradeOrderBook tradeEntry state == defaultOrderBookState where
         bidEntry = makeTestBid price
         askEntry = makeTestAsk price
         tradeEntry = makeTestTrade price bidEntry askEntry
         state = makeTestState bidEntry askEntry
+-}
 
 prop_gradientTest first last = 
     sum vp == difference where
