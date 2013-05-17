@@ -3,6 +3,7 @@ import Orderbook
 import Trader
 import Data.Heap as H
 import Test.QuickCheck
+import Debug.Trace
 import Data.HashMap as M
 
 main = quickCheck prop_CalcSpread
@@ -52,12 +53,12 @@ prop_tradeOrderBook price =
         state = makeTestState bidEntry askEntry
 -}
 
-prop_gradientTest first last = 
-    sum vp == difference where
-        difference = floor $ abs (first - last)
-        gradientTest l = map (test l) [3..length(l)]
+prop_gradientTest (Positive last) = not (0 > last) ==>
+    ((sum vp == floor difference) || (sum vp == ceiling difference)) where
+        difference = last
+        gradientTest l = Prelude.map (test l) [3..length(l)]
         test l x = gradientSwitch (reverse $ Prelude.take x l) (defaultTraderState) (found) (found) (neither)
         found s = 1
         neither s = 0
-        listVals f s = map ((+70) . (*10) . sin . (pi*)) [f,(f+0.025)..s] 
-        vp = gradientTest $ listVals first last
+        listVals f s = Prelude.map ((+70) . (*10) . sin . (pi*)) [f,f+0.5..s] 
+        vp = gradientTest $ listVals 0 last
