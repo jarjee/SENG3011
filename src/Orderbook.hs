@@ -105,3 +105,11 @@ tradeOrderBook entry state = do
         newBHeap = makePriceHeap newBMap
         newAHeap = makePriceHeap newAMap
     state {buyRecords = newBMap, buyPrices = newBHeap, sellRecords = newAMap, sellPrices = newAHeap}
+
+calculateSpread :: OrderBookState -> Double
+calculateSpread state = spread where
+    topBid = maybe (fst (0, 0)) (fst) $ viewHead (buyPrices state)
+    topAsk = maybe (fst (0, 0)) (fst) $ viewHead (sellPrices state)
+    spread = topBid - topAsk
+
+-- calculatePriceStep :: OrderBookState -> Double
