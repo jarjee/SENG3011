@@ -1,3 +1,4 @@
+{-# LANGUAGE DoAndIfThenElse #-}
 module Orderbook where
 import Types as T
 import Data.HashMap as M
@@ -41,11 +42,11 @@ enterOrderBook :: OrderBookEntry -> OrderBookState -> OrderBookState
 enterOrderBook entry state = do
     let idNum = getId entry
         entryPri = maybe (0) (id) (price entry)
-    if (isBid entry) then do --Do data processing for Bids
+    if (isBid entry) then do
         let newMap = M.insert idNum entry $ buyRecords state
             newHeap = H.insert (entryPri, entry) $ buyPrices state
         state {buyRecords = newMap, buyPrices = newHeap}
-    else do --Do data processing for Asks
+    else do
         let newMap = M.insert idNum entry $ sellRecords state
             newHeap = H.insert (entryPri, entry) $ sellPrices state
         state {sellRecords = newMap, sellPrices = newHeap}
