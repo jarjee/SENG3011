@@ -1,5 +1,6 @@
 import Types
 import Orderbook
+import Trader
 import Data.Heap as H
 import Test.QuickCheck
 --import Data.HashMap as M
@@ -17,3 +18,13 @@ prop_CalcSpread bidPrice askPrice =
         newBHeap = H.insert (bEntryPri, bidEntry) H.empty
         newAHeap = H.insert (aEntryPri, askEntry) H.empty
         state = defaultOrderBookState {buyPrices = newBHeap, sellPrices = newAHeap}
+
+prop_gradientTest first last = 
+    sum vp == difference where
+        difference = floor $ abs (first - last)
+        gradientTest l = map (test l) [3..length(l)]
+        test l x = gradientSwitch (reverse $ Prelude.take x l) (defaultTraderState) (found) (found) (neither)
+        found s = 1
+        neither s = 0
+        listVals f s = map ((+70) . (*10) . sin . (pi*)) [f,(f+0.025)..s] 
+        vp = gradientTest $ listVals first last

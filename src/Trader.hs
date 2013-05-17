@@ -1,6 +1,7 @@
 module Trader (
     traderEntry, TraderState(money,his,sha),
-    defaultTraderState, Share(shAmt,shaPri))--, traderBrain
+    defaultTraderState, Share(shAmt,shaPri), gradientSwitch
+    ) --, traderBrain
   where
 
 import Types
