@@ -1,7 +1,7 @@
 module Trader (
-    traderEntry, TraderState(money,his,sha),
-    defaultTraderState, Share(shAmt,shaPri), gradientSwitch
-    ) --, traderBrain
+    traderEntry, TraderState(money,his,sha,avg),
+    defaultTraderState, Share(shAmt,shaPri), gradientSwitch, nothing
+    )
   where
 
 import Types
@@ -26,16 +26,18 @@ data TraderState =
                    momtm :: Float,
                    money :: Float,
                    his :: [Share],
-                   sha :: [Share]} 
+                   sha :: [Share],
+                   avg :: [Double]} 
                    deriving (Show, Eq)
 
 -- |Initialises a default traderState object so you don't have to.
-defaultTraderState = TraderState [] [] 0 0.0 0.0 [] []
+defaultTraderState = TraderState [] [] 0 0.0 0.0 [] [] []
 
 -- Handles the gradient logic for the traderBrain
-gradientSwitch :: [Double] -> TraderState -> (TraderState -> f) -> (TraderState -> f)->(TraderState -> f) -> f
-gradientSwitch entries state peak valley neither = do
-    let first = entries !! 0
+gradientSwitch :: (TraderState -> f) -> (TraderState -> f) ->(TraderState -> f) -> TraderState -> f
+gradientSwitch peak valley neither state = do
+    let entries = avg state
+        first = entries !! 0
         second = entries !! 1
         third = entries !! 2
         gradient = (first - second)
