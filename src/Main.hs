@@ -7,7 +7,7 @@ import Data.Csv
 
 import Types
 import Orderbook
---import Trader
+import Trader
 import Views
 
 data MainInput = MainInput { inputCash :: Float,
@@ -41,12 +41,3 @@ parse input fields = either (\x -> putStrLn "Failed to parse the provided file.\
 orderBookLoop :: [OrderBookEntry] -> OrderBookState -> OrderBookState
 orderBookLoop [] state = state
 orderBookLoop (record:rest) state = orderBookLoop rest $ updateOrderBook record state
-
---main = do
---    handle <- openFile "../test/test.csv" ReadMode
---    trades <- fmap getTrades $ hGetContents handle
---    let tradeHistory = processOrderbook trades
---    let strategy = TradeBadly 50
---    let tradeRecommendations = generateTrades tradeHistory strategy
---    writeFile "output.csv" (csvRep tradeRecommendations)
---    hClose handle
