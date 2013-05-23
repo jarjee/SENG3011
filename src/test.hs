@@ -57,7 +57,7 @@ prop_gradientTest (Positive last) = not (0 > last) ==>
     ((sum vp == floor difference) || (sum vp == ceiling difference)) where
         difference = last
         gradientTest l = Prelude.map (test l) [3..length(l)]
-        test l x = gradientSwitch (reverse $ Prelude.take x l) (defaultTraderState) (found) (found) (neither)
+        test l x = gradientSwitch  (found) (found) (neither) (defaultTraderState {avg = (reverse $ Prelude.take x l)}) 
         found s = 1
         neither s = 0
         listVals f s = Prelude.map ((+70) . (*10) . sin . (pi*)) [f,f+0.5..s] 
