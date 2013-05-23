@@ -2,12 +2,12 @@
 module SengBasic where
 import System.Console.CmdArgs
 
-data Algorithm  = Gradient {buyAlg :: Algorithm, sellAlg :: Algorithm, neither :: String}
-		| Random {buyChance :: Double, sellChance :: Double, buyAlg :: Algorithm, sellAlg :: Algorithm, neither :: String}
+data Algorithm  = Gradient {buyAlg :: String, sellAlg :: String, neither :: String}
+		| Random {buyChance :: Double, sellChance :: Double, buyAlg :: String, sellAlg :: String, neither :: String}
 		| End {algo :: String}
 		  deriving (Show, Data, Typeable)
 
-instance Default Algorithm => Algorithm
+--instance Default Algorithm => Algorithm
 
 {-
 data Gradient = Gradient {buyAlg :: , sellAlg :: , neither :: }
@@ -21,17 +21,17 @@ data Random = Random {buyChance :: Double, sellChance :: Double, buyAlg :: , sel
 -- typ is for the type of input
 
 gradient = Gradient
-		{buyAlg = def &= typ "ALGORITHM" &= help "The algorithm for buying"
-		,sellAlg = def &= typ "ALGORITHM" &= help "The algorithm for selling"
-		,neither = def &= typ "NOTHING" &= help "The option for \"Do nothing\""}
+		{buyAlg = def &= opt end &= typ "ALGORITHM" &= help "The algorithm for buying"
+		,sellAlg = def &= opt end &= typ "ALGORITHM" &= help "The algorithm for selling"
+		,neither = def &= opt "nothing" &= typ "NOTHING" &= help "The option for \"Do nothing\""}
 
 random = Random
-		{buyChance = def &= typ "DOUBLE" &= help "The chance of buying"
-		,sellChance = def &= typ "DOUBLE" &= help "The chance of selling"
-		,buyAlg = def &= typ "ALGORITHM" &= help "The algorithm for buying"
-		,sellAlg = def &= typ "ALGORITHM" &= help "The algorithm for selling"
-		,neither = def &= typ "NOTHING" &= help "The option for \"Do nothing\""}
+		{buyChance = def &= opt "0.5" &= typ "DOUBLE" &= help "The chance of buying"
+		,sellChance = def &= opt "0.5" &= typ "DOUBLE" &= help "The chance of selling"
+		,buyAlg = def &= opt end &= typ "ALGORITHM" &= help "The algorithm for buying"
+		,sellAlg = def &= opt end &= typ "ALGORITHM" &= help "The algorithm for selling"
+		,neither = def &= opt "nothing" &= typ "NOTHING" &= help "The option for \"Do nothing\""}
 
-end = End {algo = def}
+end = End {algo = "doShit" &= opt "doShit"}
 
 main = print =<< cmdArgs (modes [gradient,random])
