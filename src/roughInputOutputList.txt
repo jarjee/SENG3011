@@ -1,0 +1,14 @@
+input stuff:
+file
+money
+algorithm string: (recursive)
+    algorithm buyalgo sellalgo neither
+amount of output info?
+
+output stuff:
+when we (our algo) makes a trade
+money made
+trades made
+shares bought
+shares sold
+shares holding at end
