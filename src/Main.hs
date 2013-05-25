@@ -10,24 +10,71 @@ import Orderbook
 import Trader
 import Views
 
-data MainInput = MainInput { inputCash :: Float,
-                             buyAlg :: String,
-                             sellAlg :: String} deriving (Show, Read)
+data MainInput = MainInput { inputCash :: Double,
+                             algorithm :: (TraderState -> TraderState)}
 
 main = do
     args <- getArgs
-    if (length args == 4) then process args else putStrLn "Please give FileName Money BuyAlgorithm SellAlgorithm"
+    if (length args == 3) then process args else putStrLn "Please give FileName Money Algorithm"
 
 process :: [String] -> IO()
 process arg = do
-    file <- readF $ head arg
-    parse (MainInput (read $ arg !! 1) (arg !! 2) (arg !! 3)) file
+    if "help" `elem` arg then helpMsg else do
+        file <- readF $ head arg
+        parse (MainInput (read $ arg !! 1) (createStrategy $ arg !! 2)) file
+
+helpMsg :: IO()
+helpMsg = do
+    progName <- getProgName
+    putStrLn $ concat ["Welcome to Team 6's High Frequency Trading simulator!\n",
+           "Here's a run down of how to use this piece of software.\n",
+           "Please call the program with all the information that is required for it to run.\n",
+
+           progName, " name-of-file amount-of-money trading-algorithm\n",
+           "Where name-of-file is the file that is going to be parsed,",
+           "amount-of-money is the amount of money that you want to give the trader initially.\n",
+
+           "The algorithm is slightly more complex as we let you build your custom strategies from ",
+           "building blocks that we provide. The algorithms are broken into 'Deciders' and 'Actors'.\n",
+           "-----------------\n",
+           "DECIDERS\n",
+           "-----------------\n",
+           "These allow your strategies to have branching behaviour for a given condition.\n",
+
+           "All deciders have to be given three algorithms to act upon and may take in extra input to function.\n",
+           "Note that we mention algorithms, not actors, as it possible to nest deciders in one another as desired.\n",
+           "The deciders that we have provided are listed below:\n",
+
+           "GRADIENT:\ngradient peak-algorithm valley-algorithm neither-algorithm \n",
+           "This checks to see if we have reached a peak or a valley and decide accordingly. We call the 'neither' ",
+           "if we haven't reached a peak or a valley yet.\n",
+
+           "RANDOM:\nrandom sell-chance buy-chance sell-algorithm buy-algorithm neither-algorithm\n",
+           "sell-chance and buy-chance are float and when added together cannot exceed 1.0. However, if they are smaller ",
+           "than 1.0, the neither-algorithm will be called for the remainder probability.\n",
+           "A random number is generated, and if it falls within the 0 to sell-range it will call the sell-algorithm,\n",
+           "and if the number falls within sell-range to (sell-range + buy-range) it calls the buy-algorithm.\n",
+           "Finally if the number falls outside of the range given by the two chances, it will call the neither-algorithm\n",
+
+           "HISTORIC:\nhistoric sell-algorithm buy-algorithm neither-algorithm\n",
+           "Historic checks if the current market average is at a historical high or a historical low for the analysis session\n",
+           "If it is a historical high, it calls the sell-algorithm and if it is a historical low it calls the buy-algorithm.\n",
+           "If it is neither, it calls the neither-algorithm\n",
+
+           "-----------------\n",
+           "ACTORS\n",
+           "-----------------\n",
+           ]
 
 parse :: MainInput -> Either String (Header, V.Vector OrderBookEntry) -> IO()
-parse input fields = either (\x -> putStrLn "Failed to parse the provided file.\nPlease check for corruption.") (undefined) fields --(dataProcessing input) fields
+parse input fields = either (\x -> putStrLn "Failed to parse the provided file.\nPlease check for corruption.") (undefined) fields
+
+{-
+    This calls our functionParse function and is here just to abstract away from what functionParse needs and what it returns.
+-}
 
 createStrategy :: String -> (TraderState -> TraderState)
-createStrategy s = snd $ functionParse (fromList $ words s) 0
+createStrategy s = snd $ functionParse (V.fromList $ words s) 0
 
 {-
     This is the preliminary recursive function that we shall use for generating our strategies.
