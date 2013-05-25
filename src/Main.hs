@@ -28,7 +28,7 @@ helpMsg = do
     progName <- getProgName
     putStrLn $ concat ["Welcome to Team 6's High Frequency Trading simulator!\n",
            "Here's a run down of how to use this piece of software.\n",
-           "Please call the program with all the information that is required for it to run.\n",
+           "Please execute the program on the commandline with all the information that is required.\n",
 
            progName, " name-of-file amount-of-money trading-algorithm\n",
            "Where name-of-file is the file that is going to be parsed,",
@@ -50,11 +50,12 @@ helpMsg = do
            "if we haven't reached a peak or a valley yet.\n",
 
            "\nRANDOM:\nFormat: random sell-chance buy-chance sell-algorithm buy-algorithm neither-algorithm\n",
-           "sell-chance and buy-chance are float and when added together cannot exceed 1.0. \nHowever, if they are smaller ",
+           "sell-chance and buy-chance are decimal numbers and when added together cannot exceed 1.0. \nHowever, if they are smaller ",
            "than 1.0, the neither-algorithm will be called for the remainder probability.\n",
-           "A random number is generated, and if it falls within the 0 to sell-range it will call the sell-algorithm,\n",
-           "and if the number falls within sell-range to (sell-range + buy-range) it calls the buy-algorithm.\n",
-           "Finally if the number falls outside of the range given by the two chances, it will call the neither-algorithm\n",
+           "A random number is generated from between 0.0 and 1.0, and if it falls within the 0 <-> sell-range it will call the sell-algorithm,\n",
+           "and if the number falls within sell-range <-> (sell-range + buy-range) it calls the buy-algorithm.\n",
+           "Finally if the number falls outside of the range given by the two chances, (sell-range + buy-range) <-> 1.0",
+           " it will call the neither-algorithm\n",
 
            "\nHISTORIC:\nFormat: historic sell-algorithm buy-algorithm neither-algorithm\n",
            "Historic checks if the current market average is at a historical high or a historical low for the analysis session\n",
