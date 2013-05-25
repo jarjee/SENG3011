@@ -1,7 +1,10 @@
 dist
 cabal-dev
+Main
 *.o
 *.hi
 *.chi
 *.chs.h
 .virthualenv
+*.csv
+*.prof
