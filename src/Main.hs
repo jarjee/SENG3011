@@ -56,6 +56,11 @@ functionParse list loc
                 buyFunc = functionParse list (fst sellFunc)
                 neither = functionParse list (fst buyFunc)
             (fst neither, randomSwitch sellChance buyChance (snd sellFunc) (snd buyFunc) (snd neither))
+        else if list V.! loc == "historic" then do
+            let sellFunc = functionParse list $ loc+1
+                buyFunc = functionParse list (fst sellFunc)
+                neither = functionParse list (fst buyFunc)
+            (fst neither, historicSwitch (snd sellFunc) (snd buyFunc) (snd neither))
         else if list V.! loc == "nothing" then (loc+1, nothing)
         else if list V.! loc == "bestBuy" then (loc+1, nothing)
         else if list V.! loc == "bestSell" then (loc+1, nothing)

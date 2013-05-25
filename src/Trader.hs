@@ -1,6 +1,7 @@
 module Trader (
     traderEntry, TraderState(money,his,sha,avg),
-    defaultTraderState, Share(shAmt,shaPri), gradientSwitch, nothing, randomSwitch
+    defaultTraderState, Share(shAmt,shaPri), gradientSwitch, nothing, randomSwitch,
+    historicSwitch
     )
   where
 
@@ -60,7 +61,7 @@ randomSwitch sellProb buyProb sell buy neither state = do
     if x <= sellProb then sell state else if (x > sellProb) && (x < sellProb+buyProb) then buy state else neither state
 
 historicSwitch :: (TraderState -> f) -> (TraderState -> f) -> (TraderState -> f) -> TraderState -> f
-historicSwitch sell buy neither state = do
+historicSwitch sell buy neither state = if (length $ avg state) < 1 then neither state else do
     let entries = avg state
         recorded = hisVal state
         current = entries !! 0 
