@@ -1,6 +1,6 @@
 module Trader (
     traderEntry, TraderState(money,his,sha,avg),
-    defaultTraderState, Share(shAmt,shaPri), gradientSwitch, nothing
+    defaultTraderState, Share(shAmt,shaPri), gradientSwitch, nothing, randomSwitch
     )
   where
 
@@ -8,6 +8,8 @@ import Types
 import Data.Maybe
 import Debug.Trace
 import Data.List as L
+import System.IO.Unsafe
+import System.Random
 
 {- |Takes in raw list of OrderBookEntry, filters so we only have ENTER entries.
     This is strictly a hack for getting the Trader submission in a useable state.
@@ -51,8 +53,10 @@ gradientSwitch peak valley neither state = do
 nothing :: TraderState -> TraderState
 nothing state = state
 
-randomSwitch :: (TraderState -> f) -> (TraderState -> f) -> (TraderState -> f) -> Float -> Float -> TraderState -> f
-randomSwitch buy sell neither buyProb sellProb state = neither state
+randomSwitch :: Float -> Float -> (TraderState -> f) -> (TraderState -> f) -> (TraderState -> f) -> TraderState -> f
+randomSwitch sellProb buyProb sell buy neither state = do
+    let x = unsafePerformIO $ randomRIO (0.0, 1.0)
+    if x <= sellProb then sell state else if (x > sellProb) && (x < sellProb+buyProb) then buy state else neither state
 
 data BoughtShares = BoughtShares { remShares :: [OrderBookEntry],
                 remMoney :: Double,
