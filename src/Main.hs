@@ -23,6 +23,61 @@ process arg = do
         file <- readF $ head arg
         parse (MainInput (read $ arg !! 1) (createStrategy $ arg !! 2)) file
 
+parse :: MainInput -> Either String (Header, V.Vector OrderBookEntry) -> IO()
+parse input fields = either (\x -> putStrLn "Failed to parse the provided file.\nPlease check for corruption.") (undefined) fields
+
+{-
+    This calls our functionParse function and is here just to abstract away from what functionParse needs and what it returns.
+-}
+
+createStrategy :: String -> (TraderState -> TraderState)
+createStrategy s = snd $ functionParse (V.fromList $ words s) 0
+
+{-
+    This is the preliminary recursive function that we shall use for generating our strategies.
+    Currently this can parse vectors correctly, but would be slow for very long strings (Due to no pattern matching).
+    It'd be possible to improve this, but since this only gets called at the start (and never afterwards)
+    I don't feel it's worth the effort to improve.
+-}
+functionParse :: V.Vector String -> Int -> (Int, (TraderState -> TraderState))
+functionParse list loc
+    | loc >= V.length list = error "Error in parsing function. Exceeded bounds."
+    | loc < 0 = error "Error in parsing. Underflow."
+    | otherwise = do
+        if list V.! loc == "gradient" then do
+            let peak = functionParse list $ loc+1
+                valley = functionParse list (fst peak)
+                neither = functionParse list (fst valley)
+            (fst neither ,gradientSwitch (snd peak) (snd valley) (snd neither))
+        else if list V.! loc == "random" then do
+            let sellChance = read $ list V.! (loc+1)
+                buyChance = read $ list V.! (loc+2)
+                sellFunc = functionParse list $ (loc+3)
+                buyFunc = functionParse list (fst sellFunc)
+                neither = functionParse list (fst buyFunc)
+            (fst neither, randomSwitch sellChance buyChance (snd sellFunc) (snd buyFunc) (snd neither))
+        else if list V.! loc == "nothing" then (loc+1, nothing)
+        else if list V.! loc == "bestBuy" then (loc+1, nothing)
+        else if list V.! loc == "bestSell" then (loc+1, nothing)
+        else
+            error $ "Invalid function name: "++(list V.! loc)
+
+--dataProcessing :: MainInput -> (Header, V.Vector OrderBookEntry) -> IO()
+--dataProcessing input (head, fields) = do
+--    let allRecords = V.toList fields
+--        cash = inputCash input
+--        tradeRecords = traderEntry $ allRecords
+--        tradeResult = traderBrain tradeRecords $ defaultTraderState {money = cash}
+--    putStrLn $ "The Trader was given : $"++show(cash)
+--    putStrLn $ "The Trader ended up with:"
+--    putStrLn $ '$':show(money tradeResult)
+--    putStrLn $ "Holding "++show(length $ sha tradeResult)++" shares."-- ++show((sum $ map (\x -> (shaPri x) * fromInteger (shAmt x)) $ sha tradeResult))
+--    putStrLn $ "And had sold "++show(length $ his tradeResult)++" shares."-- ++show((sum $ map (\x -> (shaPri x) * fromInteger (shAmt x)) $ his tradeResult))
+
+orderBookLoop :: [OrderBookEntry] -> OrderBookState -> OrderBookState
+orderBookLoop [] state = state
+orderBookLoop (record:rest) state = orderBookLoop rest $ updateOrderBook record state
+
 helpMsg :: IO()
 helpMsg = do
     progName <- getProgName
@@ -97,51 +152,3 @@ helpMsg = do
 
            progName, " input.csv 10000 \"gradient bestSell bestBuy nothing\"" 
            ]
-
-parse :: MainInput -> Either String (Header, V.Vector OrderBookEntry) -> IO()
-parse input fields = either (\x -> putStrLn "Failed to parse the provided file.\nPlease check for corruption.") (undefined) fields
-
-{-
-    This calls our functionParse function and is here just to abstract away from what functionParse needs and what it returns.
--}
-
-createStrategy :: String -> (TraderState -> TraderState)
-createStrategy s = snd $ functionParse (V.fromList $ words s) 0
-
-{-
-    This is the preliminary recursive function that we shall use for generating our strategies.
-    Currently this can parse vectors correctly, but would be slow for very long strings (Due to no pattern matching).
-    It'd be possible to improve this, but since this only gets called at the start (and never afterwards)
-    I don't feel it's worth the effort to improve.
--}
-functionParse :: V.Vector String -> Int -> (Int, (TraderState -> TraderState))
-functionParse list loc
-    | loc >= V.length list = error "Error in parsing function. Exceeded bounds."
-    | loc < 0 = error "Error in parsing. Underflow."
-    | otherwise = do
-        if list V.! loc == "gradient" then do
-            let peak = functionParse list $ loc+1
-                valley = functionParse list (fst peak)
-                neither = functionParse list (fst valley)
-            (fst neither ,gradientSwitch (snd peak) (snd valley) (snd neither))
-        else if list V.! loc == "nothing" then (loc+1, nothing)
-        else if list V.! loc == "bestBuy" then (loc+1, nothing)
-        else if list V.! loc == "bestSell" then (loc+1, nothing)
-        else
-            error $ "Invalid function name: "++(list V.! loc)
-
---dataProcessing :: MainInput -> (Header, V.Vector OrderBookEntry) -> IO()
---dataProcessing input (head, fields) = do
---    let allRecords = V.toList fields
---        cash = inputCash input
---        tradeRecords = traderEntry $ allRecords
---        tradeResult = traderBrain tradeRecords $ defaultTraderState {money = cash}
---    putStrLn $ "The Trader was given : $"++show(cash)
---    putStrLn $ "The Trader ended up with:"
---    putStrLn $ '$':show(money tradeResult)
---    putStrLn $ "Holding "++show(length $ sha tradeResult)++" shares."-- ++show((sum $ map (\x -> (shaPri x) * fromInteger (shAmt x)) $ sha tradeResult))
---    putStrLn $ "And had sold "++show(length $ his tradeResult)++" shares."-- ++show((sum $ map (\x -> (shaPri x) * fromInteger (shAmt x)) $ his tradeResult))
-
-orderBookLoop :: [OrderBookEntry] -> OrderBookState -> OrderBookState
-orderBookLoop [] state = state
-orderBookLoop (record:rest) state = orderBookLoop rest $ updateOrderBook record state
