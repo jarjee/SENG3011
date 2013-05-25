@@ -26,6 +26,9 @@ process arg = do
 parse :: MainInput -> Either String (Header, V.Vector OrderBookEntry) -> IO()
 parse input fields = either (\x -> putStrLn "Failed to parse the provided file.\nPlease check for corruption.") (undefined) fields --(dataProcessing input) fields
 
+createStrategy :: String -> (TraderState -> TraderState)
+createStrategy s = snd $ functionParse (fromList $ words s) 0
+
 {-
     This is the preliminary recursive function that we shall use for generating our strategies.
     Currently this can parse vectors correctly, but would be slow for very long strings (Due to no pattern matching).
@@ -34,8 +37,8 @@ parse input fields = either (\x -> putStrLn "Failed to parse the provided file.\
 -}
 functionParse :: V.Vector String -> Int -> (Int, (TraderState -> TraderState))
 functionParse list loc
-    | loc >= V.length list = error "Error in parsing"
-    | loc < 0 = error "Error in parsing"
+    | loc >= V.length list = error "Error in parsing function. Exceeded bounds."
+    | loc < 0 = error "Error in parsing. Underflow."
     | otherwise = do
         if list V.! loc == "gradient" then do
             let peak = functionParse list $ loc+1
@@ -43,8 +46,10 @@ functionParse list loc
                 neither = functionParse list (fst valley)
             (fst neither ,gradientSwitch (snd peak) (snd valley) (snd neither))
         else if list V.! loc == "nothing" then (loc+1, nothing)
+        else if list V.! loc == "bestBuy" then (loc+1, nothing)
+        else if list V.! loc == "bestSell" then (loc+1, nothing)
         else
-            (loc+1, nothing)
+            error $ "Invalid function name: "++(list V.! loc)
 
 --dataProcessing :: MainInput -> (Header, V.Vector OrderBookEntry) -> IO()
 --dataProcessing input (head, fields) = do
