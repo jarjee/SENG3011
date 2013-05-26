@@ -93,8 +93,14 @@ buyShares list money = do
         else BoughtShares list money $ Share 0 0
     else BoughtShares list money $ Share 0 0 
 
+----------------------
+-----  Strategy ------
+----- Generation -----
+----------------------
+
 {-
     This calls our functionParse function and is here just to abstract away from what functionParse needs and what it returns.
+    This also strips out all round brackets, to better match what our help flavour text says.
 -}
 
 createStrategy :: String -> (TraderState -> TraderState)
@@ -133,5 +139,3 @@ functionParse list loc
         else if list V.! loc == "bestSell" then (loc+1, nothing)
         else
             error $ "Invalid function name: "++(list V.! loc)
-
-
