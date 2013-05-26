@@ -20,9 +20,6 @@ import qualified Data.Vector as V
 traderEntry :: [OrderBookEntry] -> [OrderBookEntry]
 traderEntry list = filter ((== enter) . recordType) list
 
--- |This is the constant used to deal with floating point errors when calculating the second derative.
-epsilon = 0.001
-
 data TraderState = 
      TraderState { kn :: [OrderBookEntry],
                    knAsks :: [OrderBookEntry],
