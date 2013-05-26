@@ -1,6 +1,7 @@
 {-# LANGUAGE DoAndIfThenElse #-}
 module Orderbook where
 import Types as T
+import Trader
 import Data.HashMap as M
 import Data.Heap as H
 import Data.Vector as V
@@ -18,7 +19,58 @@ data OrderBookState = OrderBookState
         sellPrices :: MinPrioHeap Double OrderBookEntry }
         deriving (Eq, Show)
 
+data BidKey = BidKey { bidPrice :: Double, bidTime :: String} deriving (Eq, Show, Ord)
+
 defaultOrderBookState = OrderBookState 0 0 V.empty M.empty M.empty H.empty H.empty
+
+{-
+    We need a constant to identify the trader with.
+    It's possible to come up with a better form of identification
+    but since this is only a simple project it's 
+    what we're going to use
+-}
+traderId = 42
+
+{- 
+    This is going to be rather tricky to implement given
+    that we need to make concessions for the trader.
+
+    We also need two different sorting algorithms,
+    one for price for the asks, one with (price+time) for
+    the bids.
+
+    The best idea I have is pretty much linearly
+    match trades (only going down as long as the longest bid/ask list),
+    where we rely on updateOrderBook to make sure the lists we use
+    are up to date and sorted.
+
+    Doing the sort and then the search is O(n + nlog(n)), which might
+    be a bit expensive for large values of n. (Given that we call this
+    every time we enter a new value!)
+
+    I might want to look into trying to get the sorted values in the
+    maps instead, which would make life much easier + speed up
+    insertion somewhat.
+
+    VERY IMPORTANT: Due to how I handwave away the sorts, it'd be in my best
+    interest to make sure that the lists do not store any values which do
+    not store a price, given that it'd skew the results drastically.
+
+-}
+
+matchTrades :: OrderBookState -> OrderBookState
+matchTrades state = state
+
+{- For BuyPromise we need to build a new Bid to trade with
+   Since I assume that when we succeed in a trade for one of our traders
+   results (when I get trade matching working) we return an ask which the
+   trader then hoards until needed.
+
+   Fuffiling the AskPromise is thus just adding it to the pool.
+-}
+fuffilPromises :: TraderPromise -> OrderBookState -> OrderBookState
+fuffilPromises (BuyPromise vol core) state = state
+fuffilPromises (AskPromise entry) state = state
 
 {-
     Currently we make some estimations which affect the accuracy of this
@@ -120,3 +172,11 @@ priceComp fst snd
      | (maybe (99999) (id) (price fst)) == (maybe (99999) (id) (price snd)) = EQ
      | (maybe (99999) (id) (price fst))  > (maybe (99999) (id) (price snd)) = GT
 
+priceTimeComp fst snd
+   | priceComp fst snd == EQ && (time fst) > (time snd) = LT
+   | otherwise = priceComp fst snd 
+
+invertOrd o
+    | o == LT = GT
+    | o == EQ = EQ
+    | o == GT = LT
