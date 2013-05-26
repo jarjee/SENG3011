@@ -13,13 +13,6 @@ import System.Random
 import Data.Number.Transfinite
 import qualified Data.Vector as V
 
-{- |Takes in raw list of OrderBookEntry, filters so we only have ENTER entries.
-    This is strictly a hack for getting the Trader submission in a useable state.
-    Don't think we need to check for only unique entries (this is n^2, so I'd rather not)
--}
-traderEntry :: [OrderBookEntry] -> [OrderBookEntry]
-traderEntry list = filter ((== enter) . recordType) list
-
 data TraderState = 
      TraderState { kn :: [OrderBookEntry],
                    knAsks :: [OrderBookEntry],
