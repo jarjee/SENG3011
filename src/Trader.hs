@@ -1,7 +1,6 @@
 module Trader (
     traderEntry, TraderState(money,his,sha,avg),
-    defaultTraderState, Share(shAmt,shaPri), gradientSwitch, nothing, randomSwitch,
-    historicSwitch
+    defaultTraderState, Share(shAmt,shaPri), createStrategy
     )
   where
 
@@ -12,6 +11,7 @@ import Data.List as L
 import System.IO.Unsafe
 import System.Random
 import Data.Number.Transfinite
+import qualified Data.Vector as V
 
 {- |Takes in raw list of OrderBookEntry, filters so we only have ENTER entries.
     This is strictly a hack for getting the Trader submission in a useable state.
@@ -103,9 +103,45 @@ buyShares list money = do
         else BoughtShares list money $ Share 0 0
     else BoughtShares list money $ Share 0 0 
 
--- | This function allows us to compare prices of records with one another for sorting
-priceComp fst snd
-     | (maybe (99999) (id) (price fst))  < (maybe (99999) (id) (price snd)) = LT
-     | (maybe (99999) (id) (price fst)) == (maybe (99999) (id) (price snd)) = EQ
-     | (maybe (99999) (id) (price fst))  > (maybe (99999) (id) (price snd)) = GT
+{-
+    This calls our functionParse function and is here just to abstract away from what functionParse needs and what it returns.
+-}
+
+createStrategy :: String -> (TraderState -> TraderState)
+createStrategy s = snd $ functionParse (V.fromList $ words $ filter (\x-> x /= '(' && x /= ')' ) s) 0
+
+{-
+    This is the preliminary recursive function that we shall use for generating our strategies.
+    Currently this can parse vectors correctly, but would be slow for very long strings (Due to no pattern matching).
+    It'd be possible to improve this, but since this only gets called at the start (and never afterwards)
+    I don't feel it's worth the effort to improve.
+-}
+functionParse :: V.Vector String -> Int -> (Int, (TraderState -> TraderState))
+functionParse list loc
+    | loc >= V.length list = error "Algorithm given was not balanced. Please check if you're missing an input to a decider."
+    | loc < 0 = error "Error in parsing. Underflow."
+    | otherwise = do
+        if list V.! loc == "gradient" then do
+            let peak = functionParse list $ loc+1
+                valley = functionParse list (fst peak)
+                neither = functionParse list (fst valley)
+            (fst neither ,gradientSwitch (snd peak) (snd valley) (snd neither))
+        else if list V.! loc == "random" then do
+            let sellChance = read $ list V.! (loc+1)
+                buyChance = read $ list V.! (loc+2)
+                sellFunc = functionParse list $ (loc+3)
+                buyFunc = functionParse list (fst sellFunc)
+                neither = functionParse list (fst buyFunc)
+            (fst neither, randomSwitch sellChance buyChance (snd sellFunc) (snd buyFunc) (snd neither))
+        else if list V.! loc == "historic" then do
+            let sellFunc = functionParse list $ loc+1
+                buyFunc = functionParse list (fst sellFunc)
+                neither = functionParse list (fst buyFunc)
+            (fst neither, historicSwitch (snd sellFunc) (snd buyFunc) (snd neither))
+        else if list V.! loc == "nothing" then (loc+1, nothing)
+        else if list V.! loc == "bestBuy" then (loc+1, nothing)
+        else if list V.! loc == "bestSell" then (loc+1, nothing)
+        else
+            error $ "Invalid function name: "++(list V.! loc)
+
 
