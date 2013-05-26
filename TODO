@@ -1,14 +1,10 @@
 ---- Trader ----
-* - Currently we do not have share remainders for when we buy. We also should generate valid purchasing orders.
-* - We assume that we can always sell what we have bought. We need to keep track of what is being asked for (akin to how the buyer works)
-* - Remove the main loop from traderBrain and place it in Main.hs
+* - Check if randomSwitch is inclusive of (0,1)
 
 ---- Main ----
-* - Ideally the program flow should be taking an item from the 'master' list, feeding it into the orderbook
-    and letting the trader access the orderbook global state and the latest+sorted bid/ask entries.
-* - The loop should go: Get record -> Submit [TraderTrades] OrderBook -> Submit record OrderBook -> OrderBook newState + tradeResults traderBrain -> repeat
+* - Link Trader and OrderBook together correctly.
 
 ---- OrderBook ----
-* - Restructure this module so we can pass in a record and have the tables updated accordingly. Ideally it should work in a way similar
-    to how traderBrain works, where we take in an item + currentState and then return the updatedState. This will be holding the 
-    sum of all the shares, organized asks and trades which the trader will access.
+* - Add orderbook matching. The price sort is now in place for use for this.
+* - Make a new sort which can deal with time ie try to get ordermatching working
+* - Deal with Trader promises - ie convert a trade promise into a proper trade entry
