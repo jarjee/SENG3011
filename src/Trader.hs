@@ -80,7 +80,9 @@ bestBuy state = if H.isEmpty (buyHeap state) then state else
 
 bestSell :: TraderState -> TraderState
 bestSell state = if H.isEmpty (heldHeap state) then state else
-    state
+    maybe (state) (sellOrder . snd) bestSell
+    where bestSell = viewHead (heldHeap state)
+          sellOrder s = state
 
 data BoughtShares = BoughtShares { remShares :: [OrderBookEntry],
                 remMoney :: Double,
