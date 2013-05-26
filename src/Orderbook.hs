@@ -113,3 +113,10 @@ calculateSpread state = spread where
     spread = topBid - topAsk
 
 -- calculatePriceStep :: OrderBookState -> Double
+
+-- | This function allows us to compare prices of records with one another for sorting
+priceComp fst snd
+     | (maybe (99999) (id) (price fst))  < (maybe (99999) (id) (price snd)) = LT
+     | (maybe (99999) (id) (price fst)) == (maybe (99999) (id) (price snd)) = EQ
+     | (maybe (99999) (id) (price fst))  > (maybe (99999) (id) (price snd)) = GT
+
