@@ -1,5 +1,5 @@
 module Trader (
-    TraderState(money,avg),
+    TraderState(money,avg),TraderPromise(..),
     defaultTraderState, createStrategy
     )
   where
@@ -133,7 +133,7 @@ functionParse list loc
                 neither = functionParse list (fst buyFunc)
             (fst neither, historicSwitch (snd sellFunc) (snd buyFunc) (snd neither))
         else if list V.! loc == "nothing" then (loc+1, nothing)
-        else if list V.! loc == "bestBuy" then (loc+1, nothing)
-        else if list V.! loc == "bestSell" then (loc+1, nothing)
+        else if list V.! loc == "bestBuy" then (loc+1, bestBuy)
+        else if list V.! loc == "bestSell" then (loc+1, bestSell)
         else
             error $ "Invalid function name: "++(list V.! loc)
