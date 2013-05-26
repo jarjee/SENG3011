@@ -1,6 +1,6 @@
 module Trader (
     TraderState(money,avg),
-    defaultTraderState, Share(shAmt,shaPri), createStrategy
+    defaultTraderState, createStrategy
     )
   where
 
@@ -18,8 +18,8 @@ data TraderState =
      TraderState { money :: Double,
                    avg :: [Double],
                    hisVal :: (Double, Double), --left is lowest, right is highest
-                   buyHeap :: MaxPrioHeap Double OrderBookEntry,
-                   sellHeap :: MinPrioHeap Double OrderBookEntry,
+                   sellHeap :: MaxPrioHeap Double OrderBookEntry,
+                   buyHeap :: MinPrioHeap Double OrderBookEntry,
                    heldHeap :: MinPrioHeap Double OrderBookEntry, --Sell what we bought cheapest first
                    promises :: [TraderPromise]
                    } deriving (Show, Eq)
@@ -63,53 +63,33 @@ historicSwitch sell buy neither state = if (length $ avg state) < 1 then neither
 -------- ACTORS ----------------
 --------------------------------
 
-data TraderPromise = BuyPromise { bAmount :: Int, bpAid :: Integer } | AskPromise { aAmount :: Int, apBid :: Integer } deriving (Show, Eq)
+data TraderPromise = BuyPromise { bAmount :: Integer, bpAid :: Integer } | AskPromise {askShare :: OrderBookEntry } deriving (Show, Eq)
 
 nothing :: TraderState -> TraderState
 nothing state = state
 
+-- Attempt to buy as much as the lowest priced stock as possible
+-- Has checks to make sure we don't buy more than the stock available
 bestBuy :: TraderState -> TraderState
 bestBuy state = if H.isEmpty (buyHeap state) then state else
     maybe (state) (remainder . snd) bestPurchase
     where bestPurchase = viewHead (buyHeap state)
           remainder ent = state {promises = (buyPromise ent):(promises state), money = (money state)-(buyCost ent)}
           buyPromise h = BuyPromise (buyAmount h) (getId h)
-          buyAmount h = truncate $ (money state) / (buyPrice h)
+          canAfford h = truncate $ (money state) / (buyPrice h)
+          buyAmount h = if (canAfford h) > (stockVolume h) then (stockVolume h) else canAfford h
+          stockVolume h = (maybe (0) (id) $ volume h) 
           buyPrice h = maybe (0) (id) $ price h
           buyCost h = if (buyAmount h) > 0 then (fromIntegral $ buyAmount h) * (buyPrice h) else 0
 
+-- Simply hawk off the cheapest stock we own
 bestSell :: TraderState -> TraderState
 bestSell state = if H.isEmpty (heldHeap state) then state else
-    maybe (state) (sellOrder . snd) bestSell
-    where bestSell = viewHead (heldHeap state)
-          sellOrder s = state
-
-data BoughtShares = BoughtShares { remShares :: [OrderBookEntry],
-                remMoney :: Double,
-                bouSha :: Share} deriving (Show, Eq)
-
-data Share = Share { shAmt :: Integer,
-        shaPri :: Double } deriving (Show, Read, Eq)
-
-{-| This is a simple buying strategy that takes in a list of Asks and attempts buy as many items as possible.
-    It assumes that it can buy as many records as it wants and in its current form does not generate trade signals.
-    It also removes records once it finds a suitable match. The final version of this function will need to update
-    the entries according to the volume bought.
--}
-buyShares :: [OrderBookEntry] -> Double -> BoughtShares
-buyShares [] money = BoughtShares [] money $ Share 0 0
-buyShares list money = do
-    if list /= [] then do
-        let bestPrice = head list
-            bestPriceCost = maybe (0) (id) (price bestPrice)
-            canBuy = truncate $ money / bestPriceCost
-        if canBuy > 0 then do
-            let shareCost = (fromIntegral canBuy) * bestPriceCost
-                remainingMoney = money - shareCost
-                remainingList = L.delete bestPrice list 
-            BoughtShares remainingList remainingMoney $ Share (toInteger canBuy) bestPriceCost
-        else BoughtShares list money $ Share 0 0
-    else BoughtShares list money $ Share 0 0 
+    maybe (state) (sellOrder) bestSell
+    where bestSell = view (heldHeap state)
+          bestBuyer = viewHead (sellHeap state)
+          sellOrder s = state {promises = (sellPromise $ fst s):(promises state), heldHeap = snd s}
+          sellPromise s = AskPromise $ snd s
 
 ----------------------
 -----  Strategy ------
