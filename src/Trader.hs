@@ -46,9 +46,11 @@ gradientSwitch peak valley neither state = if (length $ avg state) < 3 then neit
         neither state
 
 randomSwitch :: Float -> Float -> (TraderState -> f) -> (TraderState -> f) -> (TraderState -> f) -> TraderState -> f
-randomSwitch sellProb buyProb sell buy neither state = do
-    let x = unsafePerformIO $ randomRIO (0.0, 1.0)
-    if x <= sellProb then sell state else if (x > sellProb) && (x < sellProb+buyProb) then buy state else neither state
+randomSwitch sellProb buyProb sell buy neither state
+    | sellProb + buyProb > 1 = state
+    | otherwise = do
+        let x = unsafePerformIO $ randomRIO (0.0, 1.0)
+        if x <= sellProb then sell state else if (x > sellProb) && (x < sellProb+buyProb) then buy state else neither state
 
 historicSwitch :: (TraderState -> f) -> (TraderState -> f) -> (TraderState -> f) -> TraderState -> f
 historicSwitch sell buy neither state = if (length $ avg state) < 1 then neither state else do
