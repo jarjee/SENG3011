@@ -1,5 +1,5 @@
 module Trader (
-    traderEntry, TraderState(money,his,sha,avg),
+    TraderState(money,his,sha,avg),
     defaultTraderState, Share(shAmt,shaPri), createStrategy
     )
   where
