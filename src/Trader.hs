@@ -1,5 +1,5 @@
 module Trader (
-    TraderState(money,his,sha,avg),
+    TraderState(money,avg),
     defaultTraderState, Share(shAmt,shaPri), createStrategy
     )
   where
@@ -12,21 +12,21 @@ import System.IO.Unsafe
 import System.Random
 import Data.Number.Transfinite
 import qualified Data.Vector as V
+import Data.Heap as H
 
 data TraderState = 
-     TraderState { kn :: [OrderBookEntry],
-                   knAsks :: [OrderBookEntry],
-                   knLength :: Integer,
-                   momtm :: Float,
-                   money :: Float,
-                   his :: [Share],
-                   sha :: [Share],
+     TraderState { money :: Double,
                    avg :: [Double],
-                   hisVal :: (Double, Double)} --left is lowest, right is highest
-                   deriving (Show, Eq)
+                   hisVal :: (Double, Double), --left is lowest, right is highest
+                   buyHeap :: MaxPrioHeap Double OrderBookEntry,
+                   sellHeap :: MinPrioHeap Double OrderBookEntry,
+                   heldHeap :: MinPrioHeap Double OrderBookEntry, --Sell what we bought cheapest first
+                   promises :: [TraderPromise]
+                   } deriving (Show, Eq)
 
 -- |Initialises a default traderState object so you don't have to.
-defaultTraderState = TraderState [] [] 0 0.0 0.0 [] [] [] (infinity, negativeInfinity)
+defaultTraderState :: TraderState
+defaultTraderState = TraderState 0.0 [] (infinity, negativeInfinity) H.empty H.empty H.empty []
 
 -------------------------------
 ----------- DECIDERS ----------
@@ -63,8 +63,24 @@ historicSwitch sell buy neither state = if (length $ avg state) < 1 then neither
 -------- ACTORS ----------------
 --------------------------------
 
+data TraderPromise = BuyPromise { bAmount :: Int, bpAid :: Integer } | AskPromise { aAmount :: Int, apBid :: Integer } deriving (Show, Eq)
+
 nothing :: TraderState -> TraderState
 nothing state = state
+
+bestBuy :: TraderState -> TraderState
+bestBuy state = if H.isEmpty (buyHeap state) then state else
+    maybe (state) (remainder . snd) bestPurchase
+    where bestPurchase = viewHead (buyHeap state)
+          remainder ent = state {promises = (buyPromise ent):(promises state), money = (money state)-(buyCost ent)}
+          buyPromise h = BuyPromise (buyAmount h) (getId h)
+          buyAmount h = truncate $ (money state) / (buyPrice h)
+          buyPrice h = maybe (0) (id) $ price h
+          buyCost h = if (buyAmount h) > 0 then (fromIntegral $ buyAmount h) * (buyPrice h) else 0
+
+bestSell :: TraderState -> TraderState
+bestSell state = if H.isEmpty (heldHeap state) then state else
+    state
 
 data BoughtShares = BoughtShares { remShares :: [OrderBookEntry],
                 remMoney :: Double,
@@ -104,7 +120,7 @@ buyShares list money = do
 -}
 
 createStrategy :: String -> (TraderState -> TraderState)
-createStrategy s = snd $ functionParse (V.fromList $ words $ filter (\x-> x /= '(' && x /= ')' ) s) 0
+createStrategy s = snd $ functionParse (V.fromList $ words $ L.filter (\x-> x /= '(' && x /= ')' ) s) 0
 
 {-
     This is the preliminary recursive function that we shall use for generating our strategies.
