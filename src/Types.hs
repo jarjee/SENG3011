@@ -6,9 +6,8 @@ module Types (
     enter, trade, amend, delete, cancel, offtr, orderEntry,
 
     -- types needed for Orderbook
-    OrderBookEntry, getId, TransId(transTyp),
-    time, price, volume, transId, oldPrice, oldVolume, trans,
-	isBid, transContents, askId, bidId,
+    OrderBookEntry, getId, time, price, volume, transId, oldPrice, oldVolume, trans, value,
+	isBid, Trans(..), TransId(..),
     makeEntry
 
 ) where

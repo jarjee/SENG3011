@@ -48,17 +48,45 @@ matchTrades state = do
     let headBuy = view (tradeBid state)
         headSell = view (tradeSell state)
     if (isJust headBuy && isJust headSell) then do
-        if (maybe (0) (id) $ price $ snd $ fst $ fromJust headBuy) >= (maybe (0) (id) $ price $ snd $ fst $ fromJust headSell) then do
-            --Make the match!
-            --Need case for buy partially satisfied (sell is now empty)
-            --Need case for sell partially satified (buy is now empty)
-            --Need case for both get removed
-           state
+        let topBuy = snd $ fst $ fromJust headBuy
+            topSell = snd $ fst $ fromJust headSell
+        if (maybe (0) (id) $ price topBuy) >= (maybe (0) (id) $ price topSell) then do
+            let topBuyVol = maybe (0) (id) $ volume topBuy
+                topSellVol = maybe (0) (id) $ volume topSell
+                newBuy = topBuy {volume = Just $ topBuyVol - (calcDiff topBuy topSell)}
+                tradeResult = (makeTrade topBuy topSell state) 
+            --Remove sell, reduce buy, generate trade 
+            if (topBuyVol > topSellVol) then do
+                let newMap = M.insert (getId topBuy) topBuy $ buyRecords state
+                    newHeap = makePriceHeap newMap
+                    newHighHeap = makePriceTimeHeap newMap
+                matchTrades tradeResult {buyRecords = newMap, buyPrices = newHeap, tradeBid = newHighHeap} 
+            --Remove buy, reduce sell, generate trade
+            else if (topBuyVol < topSellVol) then do
+                let newMap = M.insert (getId topSell) topSell $ sellRecords state
+                    newHeap = makePriceHeap newMap
+                    newHighHeap = makePriceHeap newMap
+                matchTrades tradeResult {sellRecords = newMap, sellPrices = newHeap, tradeSell = newHighHeap}
+                --Remove sell, remove buy, generate trade
+            else do
+               let  newSMap = M.delete (getId topSell) $ sellRecords state
+                    newSHeap = makePriceHeap newSMap
+                    newSHighHeap = makePriceHeap newSMap
+                    newBMap = M.delete (getId topBuy) $ buyRecords state
+                    newBHeap = makePriceHeap newBMap
+                    newBHighHeap = makePriceTimeHeap newBMap
+               matchTrades tradeResult {buyRecords = newBMap, buyPrices = newBHeap, tradeBid = newBHighHeap,sellRecords = newSMap, sellPrices = newSHeap, tradeSell = newSHighHeap} 
         else state
     else state
 
-remainingAfter :: OrderBookEntry -> OrderBookEntry -> [OrderBookEntry]
-remainingAfter bid ask = [bid]
+makeTrade :: OrderBookEntry -> OrderBookEntry -> OrderBookState -> OrderBookState
+makeTrade bid ask state = state {tradesMade = (result:tradesMade state), traderMoney = (traderMoney state)+(newMoney bid ask), traderShares = H.union (traderShares state) (newShares bid ask) }
+          where result = bid {recordType = enter, time = (orderTime state), trans = Just (TransId ' ' $ Bid (getId bid) (Just (getId ask))), volume = Just (calcDiff bid ask)}
+                newMoney bid ask = if (getId ask) == traderId then maybe (0) (id) (value ask) else 0 
+                newShares bid as = if (getId bid) == traderId then H.singleton ((maybe (0) (id) $ price bid), newAsk as) else H.empty
+                newAsk as = as {recordType = enter, time = (orderTime state), trans = Just (TransId 'A' $ Ask (traderId) Nothing), volume = Just (calcDiff bid ask)}  
+
+calcDiff bid ask = (max (maybe (0) (id) $ volume bid) (maybe (0) (id) $ volume ask))
 
 {- For BuyPromise we need to build a new Bid to trade with
    Since I assume that when we succeed in a trade for one of our traders
