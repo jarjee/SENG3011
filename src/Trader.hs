@@ -22,6 +22,7 @@ data TraderState =
                    buyHeap :: MinPrioHeap Double OrderBookEntry,
                    heldHeap :: MinPrioHeap Double OrderBookEntry, --Sell what we bought cheapest first
                    promises :: [TraderPromise]
+
                    } deriving (Show, Eq)
 
 -- |Initialises a default traderState object so you don't have to.
@@ -64,6 +65,8 @@ historicSwitch sell buy neither state = if (length $ avg state) < 1 then neither
 -------- ACTORS ----------------
 --------------------------------
 
+traderId = 42 -- So the Orderbook can identify this trade
+
 data TraderPromise = BuyPromise { buyShare :: OrderBookEntry } | AskPromise {askShare :: OrderBookEntry } deriving (Show, Eq)
 
 nothing :: TraderState -> TraderState
@@ -76,7 +79,7 @@ bestBuy state = if H.isEmpty (buyHeap state) then state else
     maybe (state) (remainder . snd) bestPurchase
     where bestPurchase = viewHead (buyHeap state)
           remainder ent = state {promises = (buyPromise ent):(promises state), money = (money state)-(buyCost ent)}
-          buyPromise h = BuyPromise h
+          buyPromise h = BuyPromise makeEntry h ()
           canAfford h = truncate $ (money state) / (buyPrice h)
           buyAmount h = if (canAfford h) > (stockVolume h) then (stockVolume h) else canAfford h
           stockVolume h = (maybe (0) (id) $ volume h) 

@@ -8,7 +8,8 @@ module Types (
     -- types needed for Orderbook
     OrderBookEntry, getId, TransId(transTyp),
     time, price, volume, transId, oldPrice, oldVolume, trans,
-	isBid, transContents, askId, bidId
+	isBid, transContents, askId, bidId,
+    makeEntry
 
 ) where
 
