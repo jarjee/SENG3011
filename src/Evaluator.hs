@@ -1,4 +1,8 @@
-module Evaluator where
+module Evaluator (
+
+    Evaluation, compileEvalInfo
+
+) where
 
 import Text.JSON
 import Types
@@ -18,9 +22,14 @@ data Evaluation =
                     askAccuracy :: Double
                     } deriving (Show, Eq)
 
+convertEval :: Evaluation -> JSValue
+convertEval (Evaluation startMon endMon monMade numBought numSold numHolding peaks valleys bids asks bidAccuracy askAccuracy) = makeObj $ [("stats", evalStats startMon endMon monMade numBought numSold numHolding),("peaks", showJSON $ convertTuples peaks),("valleys", showJSON $ convertTuples valleys),("bids", showJSON $ convertTuples bids),("asks", showJSON $ convertTuples asks),("bid_accuracy", showJSON bidAccuracy),("ask_accuracy", showJSON askAccuracy)]
+
+{-
 instance JSON Evaluation where
     showJSON (Evaluation startMon endMon monMade numBought numSold numHolding peaks valleys bids asks bidAccuracy askAccuracy) = makeObj $ [("Start Money", showJSON startMon),("End Money", showJSON endMon),("Profit", showJSON monMade),("Number Bought", showJSON numBought),("Number Sold", showJSON numSold),("Peaks", showJSON $ convertTuples peaks),("Valleys", showJSON $ convertTuples valleys),("Bids", showJSON $ convertTuples bids),("Asks", showJSON $ convertTuples asks),("Bid Accuracy", showJSON bidAccuracy),("Ask Accuracy", showJSON askAccuracy)]
     readJSON = undefined
+-}
 
 convertTuples :: (JSON a, JSON b) => [(a,b)] -> [JSValue]
 convertTuples l = map (makeObj . (\(x,y) -> [("fst",showJSON x),("snd",showJSON y)])) l

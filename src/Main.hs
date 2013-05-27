@@ -24,6 +24,8 @@ data GlobalState = GlobalState {mainInput :: MainInput
 defaultGlobalState :: GlobalState
 defaultGlobalState = GlobalState (MainInput 0 nothing) defaultTraderState defaultOrderBookState [] []
 
+outputJSONFile = "FourFrontFinancialsJSON.txt"
+
 main = do
     args <- getArgs
     if (length args == 3) then process args else helpMsg
@@ -45,11 +47,16 @@ dataProcessing input (head, fields) = do
         startGState = input defaultGlobalState {traderState {money = cash}, startMoney = cash, traderRecords = tradeRecords}
         tradeResult = mainLoop tradeRecords startGState
         evaluation = compileEvalInfo cash (money $ traderState $ tradeResult) (traderRecords $ tradeResult) (boughtShares $ tradeResult)
+        evalJSON = encode $ convertEval evaluation
+    writeFile outputJSONFile evalJSON
+    putStrLn outputJSONFile
+{-
     putStrLn $ "The Trader was given : $"++show(cash)
     putStrLn $ "The Trader ended up with:"
     putStrLn $ '$':show(money tradeResult)
     putStrLn $ "Holding "++show(length $ sha tradeResult)++" shares."-- ++show((sum $ map (\x -> (shaPri x) * fromInteger (shAmt x)) $ sha tradeResult))
     putStrLn $ "And had sold "++show(length $ his tradeResult)++" shares."-- ++show((sum $ map (\x -> (shaPri x) * fromInteger (shAmt x)) $ his tradeResult))
+-}
 
 mainLoop :: [OrderBookEntry] -> GlobalState -> GlobalState
 mainLoop [] s = s
@@ -59,7 +66,10 @@ mainLoop (record:rest) state = mainLoop rest newState
           tempNewState1 = state {orderBookState = newObookState1}
           newTraderState = algoFunction $ traderState $ tempNewState1
           tempNewState2 = tempNewState1 {traderState = newTraderState}
-          newObookState2 = fulfillPromises (promises $ traderState $ tempNewState2) (oBookState $ tempNewState2)
+          -- do things for evaluator here
+          tempNewState3 = tempNewState2 {boughtShares = (boughtShares $ tempNewState2) ++ (promises $ traderState $ tempNewState2)}
+          -- end of things for evaluator
+          newObookState2 = fulfillPromises (promises $ traderState $ tempNewState3) (oBookState $ tempNewState3)
           newState = tempNewState2 {traderState = newTraderState {promises = []}, oBookState = newObookState2}
 
 {-
