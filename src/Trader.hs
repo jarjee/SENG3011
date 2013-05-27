@@ -1,3 +1,4 @@
+{-# LANGUAGE DoAndIfThenElse #-}
 module Trader (
     TraderState(money,avg),TraderPromise(..),
     defaultTraderState, createStrategy
@@ -21,13 +22,13 @@ data TraderState =
                    sellHeap :: MaxPrioHeap Double OrderBookEntry,
                    buyHeap :: MinPrioHeap Double OrderBookEntry,
                    heldHeap :: MinPrioHeap Double OrderBookEntry, --Sell what we bought cheapest first
-                   promises :: [TraderPromise]
-
+                   promises :: [TraderPromise],
+                   tCurrTime :: String
                    } deriving (Show, Eq)
 
 -- |Initialises a default traderState object so you don't have to.
 defaultTraderState :: TraderState
-defaultTraderState = TraderState 0.0 [] (infinity, negativeInfinity) H.empty H.empty H.empty []
+defaultTraderState = TraderState 0.0 [] (infinity, negativeInfinity) H.empty H.empty H.empty [] ""
 
 -------------------------------
 ----------- DECIDERS ----------
@@ -64,6 +65,12 @@ historicSwitch sell buy neither state = if (length $ avg state) < 1 then neither
 --------------------------------
 -------- ACTORS ----------------
 --------------------------------
+{-
+    We need a constant to identify the trader with.
+    It's possible to come up with a better form of identification
+    but since this is only a simple project it's 
+    what we're going to use
+-}
 
 traderId = 42 -- So the Orderbook can identify this trade
 
@@ -79,7 +86,7 @@ bestBuy state = if H.isEmpty (buyHeap state) then state else
     maybe (state) (remainder . snd) bestPurchase
     where bestPurchase = viewHead (buyHeap state)
           remainder ent = state {promises = (buyPromise ent):(promises state), money = (money state)-(buyCost ent)}
-          buyPromise h = BuyPromise makeEntry h ()
+          buyPromise h = BuyPromise $ makeEntry h (tCurrTime state) (buyPrice h) (buyAmount h) traderId 'B'
           canAfford h = truncate $ (money state) / (buyPrice h)
           buyAmount h = if (canAfford h) > (stockVolume h) then (stockVolume h) else canAfford h
           stockVolume h = (maybe (0) (id) $ volume h) 

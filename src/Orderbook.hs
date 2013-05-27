@@ -23,14 +23,6 @@ data BidKey = BidKey { bidPrice :: Double, bidTime :: String} deriving (Eq, Show
 
 defaultOrderBookState = OrderBookState 0 0 V.empty M.empty M.empty H.empty H.empty
 
-{-
-    We need a constant to identify the trader with.
-    It's possible to come up with a better form of identification
-    but since this is only a simple project it's 
-    what we're going to use
--}
-traderId = 42
-
 {- 
     This is going to be rather tricky to implement given
     that we need to make concessions for the trader.
@@ -69,7 +61,7 @@ matchTrades state = state
    Fuffiling the AskPromise is thus just adding it to the pool.
 -}
 fuffilPromises :: TraderPromise -> OrderBookState -> OrderBookState
-fuffilPromises (BuyPromise vol core) state = state
+fuffilPromises (BuyPromise entry) state = state
 fuffilPromises (AskPromise entry) state = state
 
 {-
