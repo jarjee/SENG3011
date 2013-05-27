@@ -1,5 +1,3 @@
-module Evaluator where
-
 import Text.JSON
 import Types
 
@@ -10,23 +8,21 @@ data Evaluation =
                     numBought :: Integer,
                     numSold :: Integer,
                     numHolding :: Integer,
-                    peaks :: [(String, Double)], --(time, price)
-                    valleys :: [(String, Double)], --(time, price)
-                    bids :: [(String, Double)],
-                    asks :: [(String, Double)],
+                    peaks :: [(Double, String)], --(time, price)
+                    valleys :: [(Double, String)], --(time, price)
+                    bids :: [(Double, String)],
+                    asks :: [(Double, String)],
                     bidAccuracy :: Double,
                     askAccuracy :: Double
                     } deriving (Show, Eq)
 
 instance JSON Evaluation where
-    showJSON (Evaluation startMon endMon monMade numBought numSold numHolding peaks valleys bids asks bidAccuracy askAccuracy) = makeObj $ [("Start Money", showJSON startMon),("End Money", showJSON endMon),("Profit", showJSON monMade),("Number Bought", showJSON numBought),("Number Sold", showJSON numSold),("Peaks", showJSON $ convertTuples peaks),("Valleys", showJSON $ convertTuples valleys),("Bids", showJSON $ convertTuples bids),("Asks", showJSON $ convertTuples asks),("Bid Accuracy", showJSON bidAccuracy),("Ask Accuracy", showJSON askAccuracy)]
-    readJSON = undefined
+    showJSON (Evaluation startMon endMon monMade numBought numSold numHolding peaks valleys bids asks bidAccuracy) = makeObj $ map (\(n,v) -> (n, showJSON v)) [("Start Money", startMon),("End Money", endMon),("Profit", monMade),("Number Bought", numBought),("Number Sold", numSold),("Peaks", convertTuples peaks),("Valleys", convertTuples valleys),("Bids", convertTuples bids),("Asks", convertTuples asks),("Bid Accuracy", bidAccuracy),("Ask Accuracy", askAccuracy)]
 
-convertTuples :: (JSON a, JSON b) => [(a,b)] -> [JSValue]
 convertTuples l = map (makeObj . (\(x,y) -> [("fst",showJSON x),("snd",showJSON y)])) l
 
 -- takes in startMoney, endMoney, orderBook, listSharesBought/Sold. Returns a string?
-compileEvalInfo :: Double -> Double -> [OrderBookEntry] -> [OrderBookEntry] -> Evaluation
+compileEvalInfo :: Double -> Double -> [OrderBookEntry] -> [OrderBookEntry] -> String
 compileEvalInfo startMon endMon oBook shareList = do
     let monMade = endMon - startMon
         numBought = countBid shareList
@@ -82,7 +78,7 @@ getPeaks [x,y,z]
           time2 = time y
           time3 = time z
 getPeaks (x:y:z:rest)
-    | price2 > price1 && price2 > price3 = [(time2,price2)] ++ getPeaks (z:rest)
+    | price2 > price1 && price2 > price3 = (time2,price2) ++ getPeaks (z:rest)
     | otherwise = getPeaks (y:z:rest)
     where price1 = maybe (0) (id) $ price x
           price2 = maybe (0) (id) $ price y
@@ -108,7 +104,7 @@ getValleys [x,y,z]
           time2 = time y
           time3 = time z
 getValleys (x:y:z:rest)
-    | price2 < price1 && price2 < price3 = [(time2,price2)] ++ getValleys (z:rest)
+    | price2 < price1 && price2 < price3 = (time2,price2) ++ getValleys (z:rest)
     | otherwise = getValleys (y:z:rest)
     where price1 = maybe (0) (id) $ price x
           price2 = maybe (0) (id) $ price y
@@ -121,7 +117,7 @@ getBids [x]
     | isBid x = [(time x, maybe (0) (id) $ price x)]
     | otherwise = []
 getBids (x:xs)
-    | isBid x = [(time x, maybe (0) (id) $ price x)] ++ getBids xs
+    | isBid x = (time x, maybe (0) (id) $ price x) ++ getBids xs
     | otherwise = getBids xs
 
 getAsks :: [OrderBookEntry] -> [(String,Double)]
@@ -131,15 +127,15 @@ getAsks [x]
     | otherwise = [(time x, maybe (0) (id) $ price x)]
 getAsks (x:xs)
     | isBid x = getAsks xs
-    | otherwise = [(time x, maybe (0) (id) $ price x)] ++ getAsks xs
+    | otherwise = (time x, maybe (0) (id) $ price x) ++ getAsks xs
 
 getTimes :: [(String, Double)] -> [Double]
 getTimes [] = []
-getTimes [(timeString,_)] = [formatTime $ makeList timeString]
-getTimes ((timeString,_):rest) = [formatTime $ makeList timeString] ++ getTimes rest
+getTimes [(timeString,_)] = [formatTime timeString]
+getTimes ((timeString,_):rest) = formatTime timeString ++ getTimes rest
 
-formatTime :: [String] -> Double
-formatTime (hours:minutes:seconds:milliseconds:[]) = do
+formatTime :: String -> Double
+formatTime [hours,":",minutes,":",seconds,".",milliseconds] = do
     let numHour = (read hours) * 3600
         numMinute = (read minutes) * 60
         numSecond = read seconds
@@ -147,20 +143,6 @@ formatTime (hours:minutes:seconds:milliseconds:[]) = do
         actualTime = numHour + numMinute + numSecond + numMilliseconds
     actualTime
 formatTime _ = 0
-
--- taken from http://stackoverflow.com/questions/4978578/how-to-split-a-string-in-haskell which is a modified version of prelude's function words
-splitWhen :: (Char -> Bool) -> String -> [String]
-splitWhen p s = case dropWhile p s of 
-                     "" -> []
-                     s' -> w : splitWhen p s''
-                           where (w, s'') = break p s'
-
--- THIS IS ONLY FOR ONE USE AND OTHERWISE IS SILLY
-makeList :: String -> [String]
-makeList timeString = newList
-    where firstList = splitWhen (==':') timeString
-          secondList = splitWhen (=='.') $ last $ firstList
-          newList = (take 2 $ firstList) ++ secondList
 
 -- first is list of actual peaks/valleys, and second is list of bid/sell times
 -- might need to be done as functions specific for if checking bid accuracy versus ask accuracy
@@ -177,13 +159,10 @@ calcAccuracy xs (y:ys) = do
     let closest = findClosest y xs
         diff = closest - y
         tempAccuracy = measureAccuracy diff
-        accuracy = (tempAccuracy + (calcAccuracy xs ys * (fromIntegral $ length ys))) / ((fromIntegral $ length ys) + 1)
+        accuracy = (tempAccuracy + (calcAccuracy xs ys * length ys)) / (length ys + 1)
     accuracy
-
-findClosest :: Double -> [Double] -> Double
-findClosest item list = item
 
 measureAccuracy :: Double -> Double
 measureAccuracy diff
-    | diff < 0 = measureAccuracy (diff * (-1))
+    | diff < 0 = measureAccuracy (diff * -1)
     | otherwise = 100 - diff -- not necessarily the best measure, can change later
