@@ -93,14 +93,15 @@ bestBuy state = if H.isEmpty (buyHeap state) then state else
           buyPrice h = maybe (0) (id) $ price h
           buyCost h = if (buyAmount h) > 0 then (fromIntegral $ buyAmount h) * (buyPrice h) else 0
 
--- Simply hawk off the cheapest stock we own
+-- Simply hawk off the cheapest stock we own at the highest price we know
 bestSell :: TraderState -> TraderState
 bestSell state = if H.isEmpty (heldHeap state) then state else
     maybe (state) (sellOrder) bestSell
     where bestSell = view (heldHeap state)
           bestBuyer = viewHead (sellHeap state)
-          sellOrder s = state {promises = (sellPromise $ fst s):(promises state), heldHeap = snd s}
-          sellPromise s = AskPromise $ snd s
+          bestPrice ent = maybe (9999) (id) (price $ snd ent)
+          sellOrder s = state {promises = (sellPromise (fst s) (maybe (fst s) (id) bestBuyer)):(promises state), heldHeap = snd s}
+          sellPromise s b = AskPromise $ (snd s) {price = Just (bestPrice b)}
 
 ----------------------
 -----  Strategy ------
