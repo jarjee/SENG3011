@@ -14,6 +14,13 @@ import Evaluator
 data MainInput = MainInput { inputCash :: Double,
                              algorithm :: (TraderState -> TraderState)}
 
+data GlobalState = GlobalState {traderState :: TraderState
+                                oBookState :: OrderBookState
+                                }
+
+defaultGlobalState :: GlobalState
+defaultGlobalState = GlobalState defaultTraderState defaultOrderBookState
+
 main = do
     args <- getArgs
     if (length args == 3) then process args else helpMsg
@@ -25,19 +32,24 @@ process arg = do
         parse (MainInput (read $ arg !! 1) (createStrategy $ arg !! 2)) file
 
 parse :: MainInput -> Either String (Header, V.Vector OrderBookEntry) -> IO()
-parse input fields = either (\x -> putStrLn "Failed to parse the provided file.\nPlease check for corruption.") (undefined) fields
+parse input fields = either (\x -> putStrLn "Failed to parse the provided file.\nPlease check for corruption.") (dataProcessing input) fields
 
---dataProcessing :: MainInput -> (Header, V.Vector OrderBookEntry) -> IO()
---dataProcessing input (head, fields) = do
---    let allRecords = V.toList fields
---        cash = inputCash input
---        tradeRecords = traderEntry $ allRecords
---        tradeResult = traderBrain tradeRecords $ defaultTraderState {money = cash}
---    putStrLn $ "The Trader was given : $"++show(cash)
---    putStrLn $ "The Trader ended up with:"
---    putStrLn $ '$':show(money tradeResult)
---    putStrLn $ "Holding "++show(length $ sha tradeResult)++" shares."-- ++show((sum $ map (\x -> (shaPri x) * fromInteger (shAmt x)) $ sha tradeResult))
---    putStrLn $ "And had sold "++show(length $ his tradeResult)++" shares."-- ++show((sum $ map (\x -> (shaPri x) * fromInteger (shAmt x)) $ his tradeResult))
+dataProcessing :: MainInput -> (Header, V.Vector OrderBookEntry) -> IO()
+dataProcessing input (head, fields) = do
+    let allRecords = V.toList fields
+        cash = inputCash input
+        tradeRecords = traderEntry $ allRecords
+        startGState
+        tradeResult = traderBrain tradeRecords $ defaultTraderState {money = cash}
+    putStrLn $ "The Trader was given : $"++show(cash)
+    putStrLn $ "The Trader ended up with:"
+    putStrLn $ '$':show(money tradeResult)
+    putStrLn $ "Holding "++show(length $ sha tradeResult)++" shares."-- ++show((sum $ map (\x -> (shaPri x) * fromInteger (shAmt x)) $ sha tradeResult))
+    putStrLn $ "And had sold "++show(length $ his tradeResult)++" shares."-- ++show((sum $ map (\x -> (shaPri x) * fromInteger (shAmt x)) $ his tradeResult))
+
+mainLoop :: [OrderBookEntry] -> GlobalState -> GlobalState
+mainLoop [] s = s
+mainLoop (x:xs) s = --orderBook-stuff s -> trader s -> orderBook s -> mainLoop xs newS
 
 orderBookLoop :: [OrderBookEntry] -> OrderBookState -> OrderBookState
 orderBookLoop [] state = state
