@@ -25,7 +25,7 @@ process arg = do
         parse (MainInput (read $ arg !! 1) (createStrategy $ arg !! 2)) file
 
 parse :: MainInput -> Either String (Header, V.Vector OrderBookEntry) -> IO()
-parse input fields = either (\x -> putStrLn "Failed to parse the provided file.\nPlease check for corruption.") (undefined) fields
+parse input fields = either (\x -> putStrLn "Failed to parse the provided file.\nPlease check for corruption.") (\x -> putStrLn "BRAD FILE IS HERE.") fields
 
 --dataProcessing :: MainInput -> (Header, V.Vector OrderBookEntry) -> IO()
 --dataProcessing input (head, fields) = do
