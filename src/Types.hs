@@ -44,7 +44,7 @@ data OrderBookEntry =
                          price :: Maybe Double,
                          volume :: Maybe Integer,
                          undisclosedVolume :: Maybe Integer,
-                         value :: Maybe Float,
+                         value :: Maybe Double,
                          qualifiers :: String,
                          transId :: Integer,
                          -- bidId :: Maybe Integer, -- When bidAsk is B
@@ -67,7 +67,7 @@ data OrderBookEntry =
 makeEntry :: OrderBookEntry -> String -> Double -> Integer -> Integer -> Char -> OrderBookEntry
 makeEntry template tim pri vol id ba = do
     let tra = if (ba == 'A') then (TransId ba (Ask id Nothing)) else if (ba == 'B') then (TransId ba (Bid id Nothing)) else error $ "Attempted an entry of invalid type"
-    template {time = tim, recordType = enter, price = Just pri, volume = Just vol, trans = Just tra}
+    template {time = tim, recordType = enter, price = Just pri, volume = Just vol, value = Just $ pri * (fromInteger vol), trans = Just tra}
 
 data Trans = Bid { bidId :: Integer, sellerBrokerId :: Maybe Integer }
              | Ask { askId :: Integer, buyerBrokerId :: Maybe Integer } deriving (Show, Read, Eq, Ord)
