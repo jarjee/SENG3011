@@ -9,6 +9,7 @@ import Types
 import Orderbook
 import Trader
 import Views
+import Evaluator
 
 data MainInput = MainInput { inputCash :: Double,
                              algorithm :: (TraderState -> TraderState)}
