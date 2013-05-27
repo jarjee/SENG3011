@@ -139,6 +139,19 @@ getAsks (x:xs)
     | otherwise = (time x, maybe (0) (id) $ price x) ++ getAsks xs
 
 getTimes :: [(String, Double)] -> [Double]
+getTimes [] = []
+getTimes [(timeString,_)] = [formatTime timeString]
+getTimes ((timeString,_):rest) = formatTime timeString ++ getTimes rest
+
+formatTime :: String -> Double
+formatTime [hours,":",minutes,":",seconds,".",milliseconds] = do
+    let numHour = (read hours) * 3600
+        numMinute = (read minutes) * 60
+        numSecond = read seconds
+        numMilliseconds = (read milliseconds) / 1000
+        actualTime = numHour + numMinute + numSecond + numMilliseconds
+    actualTime
+formatTime _ = 0
 
 -- first is list of actual peaks/valleys, and second is list of bid/sell times
 -- might need to be done as functions specific for if checking bid accuracy versus ask accuracy
