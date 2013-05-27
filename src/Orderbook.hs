@@ -23,7 +23,7 @@ data OrderBookState = OrderBookState
         tradeBid :: MaxPrioHeap BidKey OrderBookEntry,
         tradeSell :: MaxPrioHeap Double OrderBookEntry,
         tradesMade :: [OrderBookEntry],
-        traderShares :: [OrderBookEntry],
+        traderShares :: MinPrioHeap Double OrderBookEntry,
         traderMoney :: Double,
         
         orderTime :: String }
@@ -32,7 +32,7 @@ data OrderBookState = OrderBookState
 data BidKey = BidKey { bidPrice :: Double, bidTime :: String} deriving (Eq, Show, Ord)
 
 defaultOrderBookState :: OrderBookState
-defaultOrderBookState = OrderBookState 0 0 V.empty M.empty M.empty H.empty H.empty H.empty H.empty [] [] 0 ""
+defaultOrderBookState = OrderBookState 0 0 V.empty M.empty M.empty H.empty H.empty H.empty H.empty [] H.empty 0 ""
 
 {- 
     This is going to be rather tricky to implement given
@@ -47,8 +47,18 @@ matchTrades :: OrderBookState -> OrderBookState
 matchTrades state = do
     let headBuy = view (tradeBid state)
         headSell = view (tradeSell state)
-    if (     
-    state
+    if (isJust headBuy && isJust headSell) then do
+        if (maybe (0) (id) $ price $ snd $ fst $ fromJust headBuy) >= (maybe (0) (id) $ price $ snd $ fst $ fromJust headSell) then do
+            --Make the match!
+            --Need case for buy partially satisfied (sell is now empty)
+            --Need case for sell partially satified (buy is now empty)
+            --Need case for both get removed
+           state
+        else state
+    else state
+
+remainingAfter :: OrderBookEntry -> OrderBookEntry -> [OrderBookEntry]
+remainingAfter bid ask = [bid]
 
 {- For BuyPromise we need to build a new Bid to trade with
    Since I assume that when we succeed in a trade for one of our traders
