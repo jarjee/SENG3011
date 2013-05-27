@@ -7,6 +7,7 @@ import qualified Data.Vector as V
 import Data.Heap as H
 import Data.Csv hiding (encode)
 import Text.JSON
+import Debug.Trace
 
 import Types
 import Orderbook
@@ -50,9 +51,10 @@ dataProcessing input (head, fields) = do
 --        startTState = startTState {money = cash}
         startGState = defaultGlobalState {mainInput = input, traderState = startTState, traderRecords = allRecords}
         tradeResult = mainLoop allRecords startGState
-        evaluation = compileEvalInfo cash (money $ traderState $ tradeResult) (traderRecords $ tradeResult) (boughtShares $ tradeResult)
-        evalJSON = encode $ convertEval evaluation
-    writeFile outputJSONFile evalJSON
+        --evaluation = compileEvalInfo cash (money $ traderState $ tradeResult) (traderRecords $ tradeResult) (boughtShares $ tradeResult)
+        --evalJSON = encode $ convertEval evaluation
+    --writeFile outputJSONFile evalJSON
+    putStrLn $ show $ length $ avg $ traderState tradeResult
     putStrLn outputJSONFile
 {-
     putStrLn $ "The Trader was given : $"++show(cash)
@@ -68,8 +70,8 @@ mainLoop (record:rest) state = mainLoop rest newState
     where newObookState1 = updateOrderBook record (oBookState state)
           algoFunction = algorithm $ mainInput state
           tempNewState1 = state {oBookState = newObookState1}
-          newTraderState = algoFunction $ traderState $ tempNewState1
-          tempNewState2 = tempNewState1 {traderState = newTraderState}
+          newTraderState = algoFunction $ traderState tempNewState1
+          tempNewState2 = tempNewState1 {traderState = newTraderState {avg = V.toList (lastSamples newObookState1)}}
           -- do things for evaluator here
           tempNewState3 = tempNewState2 {boughtShares = (boughtShares $ tempNewState2) ++ (convertPromises $ promises $ traderState $ tempNewState2)}
           -- end of things for evaluator
@@ -82,6 +84,7 @@ mainLoop (record:rest) state = mainLoop rest newState
           newObookState4 = newObookState3 {traderMoney = 0, traderShares = H.empty}
           newTraderState2 = newTraderState {promises = [], money = (money newTraderState) + newMoney, heldHeap = newHeap}
           newState = tempNewState2 {traderState = newTraderState2, oBookState = newObookState4}
+          --newState = tempNewState2
 
 convertPromises :: [TraderPromise] -> [OrderBookEntry]
 convertPromises [] = []
