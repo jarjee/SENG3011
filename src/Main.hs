@@ -1,9 +1,11 @@
+{-# LANGUAGE NamedFieldPuns #-}
 import System.Environment
 import System.IO
 import Control.Monad
 import Data.List
 import qualified Data.Vector as V
-import Data.Csv
+import Data.Csv hiding (encode)
+import Text.JSON
 
 import Types
 import Orderbook
@@ -14,10 +16,10 @@ import Evaluator
 data MainInput = MainInput { inputCash :: Double,
                              algorithm :: (TraderState -> TraderState)}
 
-data GlobalState = GlobalState {mainInput :: MainInput
-                                traderState :: TraderState
-                                oBookState :: OrderBookState
-                                traderRecords :: [OrderBookEntry]
+data GlobalState = GlobalState {mainInput :: MainInput,
+                                traderState :: TraderState,
+                                oBookState :: OrderBookState,
+                                traderRecords :: [OrderBookEntry],
                                 boughtShares :: [OrderBookEntry]
                                 }
 
@@ -43,9 +45,10 @@ dataProcessing :: MainInput -> (Header, V.Vector OrderBookEntry) -> IO()
 dataProcessing input (head, fields) = do
     let allRecords = V.toList fields
         cash = inputCash input
-        tradeRecords = traderEntry $ allRecords
-        startGState = input defaultGlobalState {traderState {money = cash}, startMoney = cash, traderRecords = tradeRecords}
-        tradeResult = mainLoop tradeRecords startGState
+        startTState = (traderState $ defaultGlobalState) {money = cash}
+--        startTState = startTState {money = cash}
+        startGState = defaultGlobalState {mainInput = input, traderState = startTState, traderRecords = allRecords}
+        tradeResult = mainLoop allRecords startGState
         evaluation = compileEvalInfo cash (money $ traderState $ tradeResult) (traderRecords $ tradeResult) (boughtShares $ tradeResult)
         evalJSON = encode $ convertEval evaluation
     writeFile outputJSONFile evalJSON
@@ -63,14 +66,20 @@ mainLoop [] s = s
 mainLoop (record:rest) state = mainLoop rest newState
     where newObookState1 = updateOrderBook record (oBookState state)
           algoFunction = algorithm $ mainInput state
-          tempNewState1 = state {orderBookState = newObookState1}
+          tempNewState1 = state {oBookState = newObookState1}
           newTraderState = algoFunction $ traderState $ tempNewState1
           tempNewState2 = tempNewState1 {traderState = newTraderState}
           -- do things for evaluator here
-          tempNewState3 = tempNewState2 {boughtShares = (boughtShares $ tempNewState2) ++ (promises $ traderState $ tempNewState2)}
+          tempNewState3 = tempNewState2 {boughtShares = (boughtShares $ tempNewState2) ++ (convertPromises $ promises $ traderState $ tempNewState2)}
           -- end of things for evaluator
           newObookState2 = fulfillPromises (promises $ traderState $ tempNewState3) (oBookState $ tempNewState3)
-          newState = tempNewState2 {traderState = newTraderState {promises = []}, oBookState = newObookState2}
+          newTraderState2 = newTraderState {promises = []}
+          newState = tempNewState2 {traderState = newTraderState2, oBookState = newObookState2}
+
+convertPromises :: [TraderPromise] -> [OrderBookEntry]
+convertPromises [] = []
+convertPromises [x] = [wantedShare x]
+convertPromises (x:xs) = [wantedShare x] ++ convertPromises xs
 
 {-
 orderBookLoop :: [OrderBookEntry] -> OrderBookState -> OrderBookState

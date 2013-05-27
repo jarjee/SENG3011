@@ -1,6 +1,6 @@
 module Evaluator (
 
-    Evaluation, compileEvalInfo
+    Evaluation, compileEvalInfo, convertEval
 
 ) where
 
@@ -33,6 +33,8 @@ instance JSON Evaluation where
 
 convertTuples :: (JSON a, JSON b) => [(a,b)] -> [JSValue]
 convertTuples l = map (makeObj . (\(x,y) -> [("fst",showJSON x),("snd",showJSON y)])) l
+
+evalStats startMon endMon monMade numBought numSold numHolding = makeObj $ [("start_money", showJSON startMon),("end_money", showJSON endMon),("profit", showJSON monMade),("number_bought", showJSON numBought),("number_sold", showJSON numSold), ("number_held", showJSON numHolding)]
 
 -- takes in startMoney, endMoney, orderBook, listSharesBought/Sold. Returns a string?
 compileEvalInfo :: Double -> Double -> [OrderBookEntry] -> [OrderBookEntry] -> Evaluation

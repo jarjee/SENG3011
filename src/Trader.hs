@@ -1,7 +1,11 @@
 {-# LANGUAGE DoAndIfThenElse #-}
 module Trader (
-    TraderState(money,avg),TraderPromise(..),
-    defaultTraderState, createStrategy, traderId
+    TraderState(money,avg, promises),TraderPromise(..),
+    defaultTraderState, createStrategy, traderId,
+    -- Deciders
+    gradientSwitch, randomSwitch, historicSwitch,
+    -- Actors
+    nothing, bestBuy, bestSell
     )
   where
 
