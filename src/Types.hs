@@ -57,6 +57,18 @@ data OrderBookEntry =
                         trans :: Maybe TransId
         } deriving (Show, Eq, Ord)
 
+{-  Don't forget to calculate value! We don't rely on it, but not a good idea for invalid data to creep in!
+    We currently ignore the transId. Since we're reading in data where we didn't exist, it isn't a good idea to
+    allocate values as if we were.
+    Currently we treat the ID of the trader as a constant, but I'd rather there be some more flexibility in what
+    ID's we generate.
+    We have a template entry for values like the instrument and date. Otherwise there's an overhaul.
+-}
+makeEntry :: OrderBookEntry -> String -> Double -> Integer -> Integer -> Char -> OrderBookEntry
+makeEntry template tim pri vol id ba = do
+    let tra = if (ba == 'A') then (TransId ba (Ask id Nothing)) else if (ba == 'B') then (TransId ba (Bid id Nothing)) else error $ "Attempted an entry of invalid type"
+    template {time = tim, recordType = enter, price = Just pri, volume = Just vol, trans = Just tra}
+
 data Trans = Bid { bidId :: Integer, sellerBrokerId :: Maybe Integer }
              | Ask { askId :: Integer, buyerBrokerId :: Maybe Integer } deriving (Show, Read, Eq, Ord)
 
