@@ -6,6 +6,7 @@ import Data.HashMap as M
 import Data.Heap as H
 import Data.Vector as V
 import Control.Applicative
+import Data.Maybe
 
 averageRes = 10
 
@@ -23,6 +24,7 @@ data OrderBookState = OrderBookState
         tradeSell :: MaxPrioHeap Double OrderBookEntry,
         tradesMade :: [OrderBookEntry],
         traderShares :: [OrderBookEntry],
+        traderMoney :: Double,
         
         orderTime :: String }
         deriving (Eq, Show)
@@ -30,7 +32,7 @@ data OrderBookState = OrderBookState
 data BidKey = BidKey { bidPrice :: Double, bidTime :: String} deriving (Eq, Show, Ord)
 
 defaultOrderBookState :: OrderBookState
-defaultOrderBookState = OrderBookState 0 0 V.empty M.empty M.empty H.empty H.empty H.empty H.empty [] [] ""
+defaultOrderBookState = OrderBookState 0 0 V.empty M.empty M.empty H.empty H.empty H.empty H.empty [] [] 0 ""
 
 {- 
     This is going to be rather tricky to implement given
@@ -45,7 +47,7 @@ matchTrades :: OrderBookState -> OrderBookState
 matchTrades state = do
     let headBuy = view (tradeBid state)
         headSell = view (tradeSell state)
-         
+    if (     
     state
 
 {- For BuyPromise we need to build a new Bid to trade with
