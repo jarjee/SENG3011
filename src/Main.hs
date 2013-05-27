@@ -74,13 +74,14 @@ mainLoop (record:rest) state = mainLoop rest newState
           tempNewState3 = tempNewState2 {boughtShares = (boughtShares $ tempNewState2) ++ (convertPromises $ promises $ traderState $ tempNewState2)}
           -- end of things for evaluator
           newObookState2 = fulfillPromises (promises $ traderState $ tempNewState3) (oBookState $ tempNewState3)
-          newMoney = traderMoney $ newObookState2
+          newObookState3 = matchTrades newObookState2
+          newMoney = traderMoney $ newObookState3
           tHeldHeap = heldHeap $ newTraderState
-          oBookTraderSharesHeap = traderShares $ newObookState2
+          oBookTraderSharesHeap = traderShares $ newObookState3
           newHeap = H.union tHeldHeap oBookTraderSharesHeap
-          newObookState3 = newObookState2 {traderMoney = 0, traderShares = H.empty}
+          newObookState4 = newObookState3 {traderMoney = 0, traderShares = H.empty}
           newTraderState2 = newTraderState {promises = [], money = (money newTraderState) + newMoney, heldHeap = newHeap}
-          newState = tempNewState2 {traderState = newTraderState2, oBookState = newObookState3}
+          newState = tempNewState2 {traderState = newTraderState2, oBookState = newObookState4}
 
 convertPromises :: [TraderPromise] -> [OrderBookEntry]
 convertPromises [] = []
