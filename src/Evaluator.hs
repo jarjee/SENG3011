@@ -180,19 +180,25 @@ calcAccuracy [] [] = 100
 calcAccuracy [] _ = 0
 calcAccuracy _ [] = 0
 calcAccuracy xs [y] = do
-    let closest = findClosest y xs
+    let closest = findClosest y (y + 100) xs
         diff = closest - y
         accuracy = measureAccuracy diff
     accuracy
 calcAccuracy xs (y:ys) = do
-    let closest = findClosest y xs
+    let closest = findClosest y (y + 100) xs
         diff = closest - y
         tempAccuracy = measureAccuracy diff
         accuracy = (tempAccuracy + (calcAccuracy xs ys * (fromIntegral $ length ys))) / ((fromIntegral $ length ys) + 1)
     accuracy
 
-findClosest :: Double -> [Double] -> Double
-findClosest item list = item
+findClosest :: Double -> Double -> [Double] -> Double
+findClosest _ current [] = current
+findClosest item current [x]
+    | abs (item - x) < abs (item - current) = x
+    | otherwise = current
+findClosest item current (x:xs)
+    | abs (item - x) < abs (item - current) = findClosest item x xs
+    | otherwise = findClosest item current xs
 
 measureAccuracy :: Double -> Double
 measureAccuracy diff
