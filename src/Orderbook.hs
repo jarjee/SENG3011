@@ -13,20 +13,24 @@ data OrderBookState = OrderBookState
        { entriesNum :: Integer,
         average :: Double,
         lastSamples :: Vector Double,
+        
         buyRecords :: Map Integer OrderBookEntry,
         sellRecords :: Map Integer OrderBookEntry,
         buyPrices :: MaxPrioHeap Double OrderBookEntry,
         sellPrices :: MinPrioHeap Double OrderBookEntry,
-        highSell :: MaxPrioHeap BidKey OrderBookEntry,
+        
+        tradeBid :: MaxPrioHeap BidKey OrderBookEntry,
+        tradeSell :: MaxPrioHeap Double OrderBookEntry,
         tradesMade :: [OrderBookEntry],
         traderShares :: [OrderBookEntry],
+        
         orderTime :: String }
         deriving (Eq, Show)
 
 data BidKey = BidKey { bidPrice :: Double, bidTime :: String} deriving (Eq, Show, Ord)
 
 defaultOrderBookState :: OrderBookState
-defaultOrderBookState = OrderBookState 0 0 V.empty M.empty M.empty H.empty H.empty H.empty [] []
+defaultOrderBookState = OrderBookState 0 0 V.empty M.empty M.empty H.empty H.empty H.empty H.empty [] [] ""
 
 {- 
     This is going to be rather tricky to implement given
@@ -35,28 +39,14 @@ defaultOrderBookState = OrderBookState 0 0 V.empty M.empty M.empty H.empty H.emp
     We also need two different sorting algorithms,
     one for price for the asks, one with (price+time) for
     the bids.
-
-    The best idea I have is pretty much linearly
-    match trades (only going down as long as the longest bid/ask list),
-    where we rely on updateOrderBook to make sure the lists we use
-    are up to date and sorted.
-
-    Doing the sort and then the search is O(n + nlog(n)), which might
-    be a bit expensive for large values of n. (Given that we call this
-    every time we enter a new value!)
-
-    I might want to look into trying to get the sorted values in the
-    maps instead, which would make life much easier + speed up
-    insertion somewhat.
-
-    VERY IMPORTANT: Due to how I handwave away the sorts, it'd be in my best
-    interest to make sure that the lists do not store any values which do
-    not store a price, given that it'd skew the results drastically.
-
 -}
 
 matchTrades :: OrderBookState -> OrderBookState
-matchTrades state = state
+matchTrades state = do
+    let headBuy = view (tradeBid state)
+        headSell = view (tradeSell state)
+         
+    state
 
 {- For BuyPromise we need to build a new Bid to trade with
    Since I assume that when we succeed in a trade for one of our traders
@@ -65,10 +55,10 @@ matchTrades state = state
 
    Fuffiling the AskPromise is thus just adding it to the pool.
 -}
-fuffilPromises :: TraderPromise -> OrderBookState -> OrderBookState
-fuffilPromises (BuyPromise entry) state = updateOrderBook entry state
-fuffilPromises (AskPromise entry) state = updateOrderBook entry state
-
+fulfillPromises :: [TraderPromise] -> OrderBookState -> OrderBookState
+fulfillPromises [] state = state
+fulfillPromises (x:xs) state = fulfillPromises xs (fulfill x state)
+    where fulfill x s = updateOrderBook x s
 {-
     Currently we make some estimations which affect the accuracy of this
     simulation. Enter is fine, as is delete, but amend is supposed to change
@@ -84,7 +74,7 @@ updateOrderBook entry state
     | otherwise = state
     where
         newEntries = (entriesNum state)+1
-        result = calculateAverage entry state {entriesNum = newEntries}
+        result = calculateAverage entry state {entriesNum = newEntries, orderTime= time entry}
         typ = recordType entry
 
 enterOrderBook :: OrderBookEntry -> OrderBookState -> OrderBookState
@@ -94,12 +84,13 @@ enterOrderBook entry state = do
     if (isBid entry) then do
         let newMap = M.insert idNum entry $ buyRecords state
             newHeap = H.insert (entryPri, entry) $ buyPrices state
-        state {buyRecords = newMap, buyPrices = newHeap}
+            newHighHeap = H.insert (BidKey entryPri (time entry), entry) $ tradeBid state
+        state {buyRecords = newMap, buyPrices = newHeap, tradeBid = newHighHeap}
     else do
         let newMap = M.insert idNum entry $ sellRecords state
             newHeap = H.insert (entryPri, entry) $ sellPrices state
-            newHighHeap = H.insert (entryPri, entry) $ highSell state
-        state {sellRecords = newMap, sellPrices = newHeap, highSell = newHighHeap}
+            newHighHeap = H.insert (entryPri, entry) $ tradeSell state
+        state {sellRecords = newMap, sellPrices = newHeap, tradeSell = newHighHeap}
 
 deleteOrderBook :: OrderBookEntry -> OrderBookState -> OrderBookState
 deleteOrderBook entry state = do
@@ -107,12 +98,13 @@ deleteOrderBook entry state = do
     if (isBid entry) then do
         let newMap = M.delete (getId entry) (buyRecords state)
             newHeap = makePriceHeap newMap
-        state {buyRecords = newMap, buyPrices = newHeap}
+            newHighHeap = makePriceTimeHeap newMap
+        state {buyRecords = newMap, buyPrices = newHeap, tradeBid = newHighHeap}
     else do
         let newMap = M.delete (getId entry) (sellRecords state)
             newHeap = makePriceHeap newMap
             newHighHeap = makePriceHeap newMap
-        state {sellRecords = newMap, sellPrices = newHeap, highSell = newHighHeap}
+        state {sellRecords = newMap, sellPrices = newHeap, tradeSell = newHighHeap}
 
 amendOrderBook :: OrderBookEntry -> OrderBookState -> OrderBookState
 amendOrderBook entry state = do
@@ -120,12 +112,14 @@ amendOrderBook entry state = do
     if (isBid entry) then do
         let newMap = M.insert idNum entry $ buyRecords state
             newHeap = makePriceHeap newMap
-        state {buyRecords = newMap, buyPrices = newHeap}
+            newHighHeap = makePriceTimeHeap newMap
+
+        state {buyRecords = newMap, buyPrices = newHeap, tradeBid = newHighHeap}
     else do
         let newMap = M.insert idNum entry $ sellRecords state 
             newHeap = makePriceHeap newMap 
             newHighHeap = makePriceHeap newMap
-        state {sellRecords = newMap, sellPrices = newHeap, highSell = newHighHeap}
+        state {sellRecords = newMap, sellPrices = newHeap, tradeSell = newHighHeap}
 
 makePriceHeap newMap = H.fromList $ Prelude.map (\(x,y) -> (maybe (0) (id) (price y),y)) $ M.toList newMap
 
@@ -158,7 +152,10 @@ tradeOrderBook entry state = do
         newAMap = M.delete aID (sellRecords state)
         newBHeap = makePriceHeap newBMap
         newAHeap = makePriceHeap newAMap
-    state {buyRecords = newBMap, buyPrices = newBHeap, sellRecords = newAMap, sellPrices = newAHeap}
+
+        newHighBHeap = makePriceTimeHeap newBMap
+        newHighAHeap = makePriceHeap newAMap
+    state {buyRecords = newBMap, buyPrices = newBHeap, sellRecords = newAMap, sellPrices = newAHeap, tradeBid = newHighBHeap, tradeSell = newHighAHeap}
 
 calculateSpread :: OrderBookState -> Double
 calculateSpread state = spread where
