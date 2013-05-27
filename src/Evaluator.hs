@@ -1,19 +1,5 @@
---NOTE: This is currently a semi-rough model of how this might work, as I'm not sure where the code would be put in the overall program, 
---      and thus it may need adjustments in architecture/method depending on where it ends up and how wrong it may end up being
---      also subject to any adjustments for optimisations in future
-
-{-
-things for evaluator:
-money started with
-money ended with
-money made (derived)
-the shares bought throughout (orderBookEntries for bids/asks)
-numShares bought
-numShares sold
-numShares holding
-graph of peaks/valleys, showing when shares were bought -- graph may have to be done on gui side?
-average accuracy %? (based on how close to a literal peak/valley shares were sold/bought)
--}
+import Text.JSON
+import Types
 
 data Evaluation = 
         Evaluation {startMon :: Double,
@@ -22,13 +8,18 @@ data Evaluation =
                     numBought :: Integer,
                     numSold :: Integer,
                     numHolding :: Integer,
-                    peaks :: [(Double, Double)], --(time, price)
-                    valleys :: [(Double, Double)], --(time, price)
-                    bids :: [(Double, Double)],
-                    asks :: [(Double, Double)],
+                    peaks :: [(Double, String)], --(time, price)
+                    valleys :: [(Double, String)], --(time, price)
+                    bids :: [(Double, String)],
+                    asks :: [(Double, String)],
                     bidAccuracy :: Double,
                     askAccuracy :: Double
                     } deriving (Show, Eq)
+
+instance JSON Evaluation where
+    showJSON (Evaluation startMon endMon monMade numBought numSold numHolding peaks valleys bids asks bidAccuracy) = makeObj $ map (\(n,v) -> (n, showJSON v)) [("Start Money", startMon),("End Money", endMon),("Profit", monMade),("Number Bought", numBought),("Number Sold", numSold),("Peaks", convertTuples peaks),("Valleys", convertTuples valleys),("Bids", convertTuples bids),("Asks", convertTuples asks),("Bid Accuracy", bidAccuracy),("Ask Accuracy", askAccuracy)]
+
+convertTuples l = map (makeObj . (\(x,y) -> [("fst",showJSON x),("snd",showJSON y)])) l
 
 -- takes in startMoney, endMoney, orderBook, listSharesBought/Sold. Returns a string?
 compileEvalInfo :: Double -> Double -> [OrderBookEntry] -> [OrderBookEntry] -> String
