@@ -4,6 +4,7 @@ import System.IO
 import Control.Monad
 import Data.List
 import qualified Data.Vector as V
+import Data.Heap as H
 import Data.Csv hiding (encode)
 import Text.JSON
 
@@ -73,8 +74,13 @@ mainLoop (record:rest) state = mainLoop rest newState
           tempNewState3 = tempNewState2 {boughtShares = (boughtShares $ tempNewState2) ++ (convertPromises $ promises $ traderState $ tempNewState2)}
           -- end of things for evaluator
           newObookState2 = fulfillPromises (promises $ traderState $ tempNewState3) (oBookState $ tempNewState3)
-          newTraderState2 = newTraderState {promises = []}
-          newState = tempNewState2 {traderState = newTraderState2, oBookState = newObookState2}
+          newMoney = traderMoney $ newObookState2
+          tHeldHeap = heldHeap $ newTraderState
+          oBookTraderSharesHeap = traderShares $ newObookState2
+          newHeap = H.union tHeldHeap oBookTraderSharesHeap
+          newObookState3 = newObookState2 {traderMoney = 0, traderShares = H.empty}
+          newTraderState2 = newTraderState {promises = [], money = (money newTraderState) + newMoney, heldHeap = newHeap}
+          newState = tempNewState2 {traderState = newTraderState2, oBookState = newObookState3}
 
 convertPromises :: [TraderPromise] -> [OrderBookEntry]
 convertPromises [] = []

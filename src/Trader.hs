@@ -1,6 +1,6 @@
 {-# LANGUAGE DoAndIfThenElse #-}
 module Trader (
-    TraderState(money,avg, promises),TraderPromise(..),
+    TraderState(money,avg, promises, heldHeap),TraderPromise(..),
     defaultTraderState, createStrategy, traderId,
     -- Deciders
     gradientSwitch, randomSwitch, historicSwitch,
