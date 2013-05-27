@@ -58,7 +58,7 @@ matchTrades state = do
 fulfillPromises :: [TraderPromise] -> OrderBookState -> OrderBookState
 fulfillPromises [] state = state
 fulfillPromises (x:xs) state = fulfillPromises xs (fulfill x state)
-    where fulfill x s = updateOrderBook x s
+    where fulfill x s = updateOrderBook (wantedShare x) s
 {-
     Currently we make some estimations which affect the accuracy of this
     simulation. Enter is fine, as is delete, but amend is supposed to change
