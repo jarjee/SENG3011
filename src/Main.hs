@@ -14,12 +14,15 @@ import Evaluator
 data MainInput = MainInput { inputCash :: Double,
                              algorithm :: (TraderState -> TraderState)}
 
-data GlobalState = GlobalState {traderState :: TraderState
+data GlobalState = GlobalState {mainInput :: MainInput
+                                traderState :: TraderState
                                 oBookState :: OrderBookState
+                                traderRecords :: [OrderBookEntry]
+                                boughtShares :: [OrderBookEntry]
                                 }
 
 defaultGlobalState :: GlobalState
-defaultGlobalState = GlobalState defaultTraderState defaultOrderBookState
+defaultGlobalState = GlobalState (MainInput 0 nothing) defaultTraderState defaultOrderBookState [] []
 
 main = do
     args <- getArgs
@@ -39,8 +42,9 @@ dataProcessing input (head, fields) = do
     let allRecords = V.toList fields
         cash = inputCash input
         tradeRecords = traderEntry $ allRecords
-        startGState
-        tradeResult = traderBrain tradeRecords $ defaultTraderState {money = cash}
+        startGState = input defaultGlobalState {traderState {money = cash}, startMoney = cash, traderRecords = tradeRecords}
+        tradeResult = mainLoop tradeRecords startGState
+        evaluation = compileEvalInfo cash (money $ traderState $ tradeResult) (traderRecords $ tradeResult) (boughtShares $ tradeResult)
     putStrLn $ "The Trader was given : $"++show(cash)
     putStrLn $ "The Trader ended up with:"
     putStrLn $ '$':show(money tradeResult)
@@ -49,11 +53,20 @@ dataProcessing input (head, fields) = do
 
 mainLoop :: [OrderBookEntry] -> GlobalState -> GlobalState
 mainLoop [] s = s
-mainLoop (x:xs) s = --orderBook-stuff s -> trader s -> orderBook s -> mainLoop xs newS
+mainLoop (record:rest) state = mainLoop rest newState
+    where newObookState1 = updateOrderBook record (oBookState state)
+          algoFunction = algorithm $ mainInput state
+          tempNewState1 = state {orderBookState = newObookState1}
+          newTraderState = algoFunction $ traderState $ tempNewState1
+          tempNewState2 = tempNewState1 {traderState = newTraderState}
+          newObookState2 = fulfillPromises (promises $ traderState $ tempNewState2) (oBookState $ tempNewState2)
+          newState = tempNewState2 {traderState = newTraderState {promises = []}, oBookState = newObookState2}
 
+{-
 orderBookLoop :: [OrderBookEntry] -> OrderBookState -> OrderBookState
 orderBookLoop [] state = state
 orderBookLoop (record:rest) state = orderBookLoop rest $ updateOrderBook record state
+-}
 
 helpMsg :: IO()
 helpMsg = do
