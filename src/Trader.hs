@@ -74,7 +74,7 @@ historicSwitch sell buy neither state = if (length $ avg state) < 1 then neither
 
 traderId = 42 -- So the Orderbook can identify this trade
 
-data TraderPromise = BuyPromise { buyShare :: OrderBookEntry } | AskPromise {askShare :: OrderBookEntry } deriving (Show, Eq)
+data TraderPromise = TraderPromise { wantedShare :: OrderBookEntry } deriving (Show, Eq)
 
 nothing :: TraderState -> TraderState
 nothing state = state
@@ -86,7 +86,7 @@ bestBuy state = if H.isEmpty (buyHeap state) then state else
     maybe (state) (remainder . snd) bestPurchase
     where bestPurchase = viewHead (buyHeap state)
           remainder ent = state {promises = (buyPromise ent):(promises state), money = (money state)-(buyCost ent)}
-          buyPromise h = BuyPromise $ makeEntry h (tCurrTime state) (buyPrice h) (buyAmount h) traderId 'B'
+          buyPromise h = TraderPromise $ makeEntry h (tCurrTime state) (buyPrice h) (buyAmount h) traderId 'B'
           canAfford h = truncate $ (money state) / (buyPrice h)
           buyAmount h = if (canAfford h) > (stockVolume h) then (stockVolume h) else canAfford h
           stockVolume h = (maybe (0) (id) $ volume h) 
@@ -101,7 +101,7 @@ bestSell state = if H.isEmpty (heldHeap state) then state else
           bestBuyer = viewHead (sellHeap state)
           bestPrice ent = maybe (9999) (id) (price $ snd ent)
           sellOrder s = state {promises = (sellPromise (fst s) (maybe (fst s) (id) bestBuyer)):(promises state), heldHeap = snd s}
-          sellPromise s b = AskPromise $ (snd s) {price = Just (bestPrice b)}
+          sellPromise s b = TraderPromise $ (snd s) {price = Just (bestPrice b)}
 
 ----------------------
 -----  Strategy ------
