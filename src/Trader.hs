@@ -1,3 +1,4 @@
+{-# LANGUAGE DoAndIfThenElse #-}
 module Trader (
     TraderState(money,avg),TraderPromise(..),
     defaultTraderState, createStrategy
@@ -79,7 +80,7 @@ bestBuy state = if H.isEmpty (buyHeap state) then state else
     maybe (state) (remainder . snd) bestPurchase
     where bestPurchase = viewHead (buyHeap state)
           remainder ent = state {promises = (buyPromise ent):(promises state), money = (money state)-(buyCost ent)}
-          buyPromise h = BuyPromise makeEntry h ()
+          buyPromise h = BuyPromise h
           canAfford h = truncate $ (money state) / (buyPrice h)
           buyAmount h = if (canAfford h) > (stockVolume h) then (stockVolume h) else canAfford h
           stockVolume h = (maybe (0) (id) $ volume h) 
