@@ -63,10 +63,10 @@ makeRandomReal depth
 -- (10-14):(00-59):(00-59):(000-999)
 randomTimeString :: String
 randomTimeString = timeString
-    where hours = myRandom 10 14
-          minutes = myRandom 0 59
-          seconds = myRandom 0 59
-          milSeconds = myRandom 0 999
+    where hours = floor $ myRandom 10 14
+          minutes = floor $ myRandom 0 59
+          seconds = floor $ myRandom 0 59
+          milSeconds = floor $ myRandom 0 999
           timeString = (show hours) ++ ":" ++ (show minutes) ++ ":" ++ (show seconds) ++ "." ++ (show milSeconds)
 
 randomPrice :: Double
