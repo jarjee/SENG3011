@@ -47,9 +47,9 @@ gradientSwitch peak valley neither state = if (length $ avg state) < 3 then neit
 
 randomSwitch :: Float -> Float -> (TraderState -> f) -> (TraderState -> f) -> (TraderState -> f) -> TraderState -> f
 randomSwitch sellProb buyProb sell buy neither state = do
-        if ((sellProb + buyProb) > 1) || (sellProb < 0) || (buyProb < 0) then state else
-        let x = unsafePerformIO $ randomRIO (0.0, 1.0)
-        if x <= sellProb then sell state else if (x > sellProb) && (x < sellProb+buyProb) then buy state else neither state
+        if ((sellProb + buyProb) > 1) || (sellProb < 0) || (buyProb < 0) then neither state else do
+            let x = unsafePerformIO $ randomRIO (0.0, 1.0)
+            if x <= sellProb then sell state else if (x > sellProb) && (x < sellProb+buyProb) then buy state else neither state
 
 historicSwitch :: (TraderState -> f) -> (TraderState -> f) -> (TraderState -> f) -> TraderState -> f
 historicSwitch sell buy neither state = if (length $ avg state) < 1 then neither state else do
@@ -64,7 +64,7 @@ historicSwitch sell buy neither state = if (length $ avg state) < 1 then neither
 -------- ACTORS ----------------
 --------------------------------
 
-data TraderPromise = BuyPromise { bAmount :: Integer, bpAid :: Integer } | AskPromise {askShare :: OrderBookEntry } deriving (Show, Eq)
+data TraderPromise = BuyPromise { buyShare :: OrderBookEntry } | AskPromise {askShare :: OrderBookEntry } deriving (Show, Eq)
 
 nothing :: TraderState -> TraderState
 nothing state = state
@@ -76,7 +76,7 @@ bestBuy state = if H.isEmpty (buyHeap state) then state else
     maybe (state) (remainder . snd) bestPurchase
     where bestPurchase = viewHead (buyHeap state)
           remainder ent = state {promises = (buyPromise ent):(promises state), money = (money state)-(buyCost ent)}
-          buyPromise h = BuyPromise (buyAmount h) (getId h)
+          buyPromise h = BuyPromise h
           canAfford h = truncate $ (money state) / (buyPrice h)
           buyAmount h = if (canAfford h) > (stockVolume h) then (stockVolume h) else canAfford h
           stockVolume h = (maybe (0) (id) $ volume h) 
