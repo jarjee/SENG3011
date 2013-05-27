@@ -1,7 +1,7 @@
 {-# LANGUAGE DoAndIfThenElse #-}
 module Trader (
     TraderState(money,avg),TraderPromise(..),
-    defaultTraderState, createStrategy
+    defaultTraderState, createStrategy, traderId
     )
   where
 
