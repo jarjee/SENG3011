@@ -20,12 +20,13 @@ data Evaluation =
                     askAccuracy :: Double
                     } deriving (Show, Eq)
 
-instance JSON Evaluation where
-    showJSON (Evaluation startMon endMon monMade numBought numSold numHolding peaks valleys bids asks bidAccuracy askAccuracy) = makeObj $ [("Start Money", showJSON startMon),("End Money", showJSON endMon),("Profit", showJSON monMade),("Number Bought", showJSON numBought),("Number Sold", showJSON numSold),("Peaks", showJSON $ convertTuples peaks),("Valleys", showJSON $ convertTuples valleys),("Bids", showJSON $ convertTuples bids),("Asks", showJSON $ convertTuples asks),("Bid Accuracy", showJSON bidAccuracy),("Ask Accuracy", showJSON askAccuracy)]
-    readJSON = undefined
+convertEval :: Evaluation -> JSValue
+convertEval (Evaluation startMon endMon monMade numBought numSold numHolding peaks valleys bids asks bidAccuracy askAccuracy) = makeObj $ [("stats", evalStats startMon endMon monMade numBought numSold numHolding),("peaks", showJSON $ convertTuples peaks),("valleys", showJSON $ convertTuples valleys),("bids", showJSON $ convertTuples bids),("asks", showJSON $ convertTuples asks),("bid_accuracy", showJSON bidAccuracy),("ask_accuracy", showJSON askAccuracy)]
 
 convertTuples :: (JSON a, JSON b) => [(a,b)] -> [JSValue]
 convertTuples l = map (makeObj . (\(x,y) -> [("fst",showJSON x),("snd",showJSON y)])) l
+
+evalStats startMon endMon monMade numBought numSold numHolding = makeObj $ [("start_money", showJSON startMon),("end_money", showJSON endMon),("profit", showJSON monMade),("number_bought", showJSON numBought),("number_sold", showJSON numSold), ("number_held", showJSON numHolding)]
 
 main = do
     let startMoney = 10000
@@ -47,7 +48,7 @@ main = do
         bidAccuracy = calcAccuracy valleyTimes bidTimes
         askAccuracy = calcAccuracy peakTimes askTimes
         eval = Evaluation startMoney endMoney profit sharesBought sharesSold sharesHolding randomPeaks randomValleys randomBids randomAsks bidAccuracy askAccuracy
-        evalJSON = encode $ showJSON eval
+        evalJSON = encode $ convertEval eval
     writeFile "RandomJSON.txt" evalJSON
 
 
