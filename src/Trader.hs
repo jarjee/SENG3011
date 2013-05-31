@@ -1,7 +1,7 @@
 {-# LANGUAGE DoAndIfThenElse #-}
 module Trader (
     TraderState(money,avg, promises, heldHeap),TraderPromise(..),
-    defaultTraderState, createStrategy, traderId,
+    defaultTraderState, createStrategy, traderId, sellHeap, buyHeap,
     -- Deciders
     gradientSwitch, randomSwitch, historicSwitch,
     -- Actors
@@ -18,21 +18,22 @@ import System.Random
 import Data.Number.Transfinite
 import qualified Data.Vector as V
 import Data.Heap as H
+import Data.Set as S
 
 data TraderState = 
      TraderState { money :: Double,
                    avg :: [Double],
                    hisVal :: (Double, Double), --left is lowest, right is highest
-                   sellHeap :: MaxPrioHeap Double OrderBookEntry,
-                   buyHeap :: MinPrioHeap Double OrderBookEntry,
-                   heldHeap :: MinPrioHeap Double OrderBookEntry, --Sell what we bought cheapest first
+                   sellHeap :: Set OrderBookEntry,
+                   buyHeap :: Set OrderBookEntry,
+                   heldHeap :: Set OrderBookEntry, --Sell what we bought cheapest first
                    promises :: [TraderPromise],
                    tCurrTime :: String
                    } deriving (Show, Eq)
 
 -- |Initialises a default traderState object so you don't have to.
 defaultTraderState :: TraderState
-defaultTraderState = TraderState 0.0 [] (infinity, negativeInfinity) H.empty H.empty H.empty [] ""
+defaultTraderState = TraderState 0.0 [] (infinity, negativeInfinity) S.empty S.empty S.empty [] ""
 
 -------------------------------
 ----------- DECIDERS ----------
@@ -86,9 +87,9 @@ nothing state = state
 -- Attempt to buy as much as the lowest priced stock as possible
 -- Has checks to make sure we don't buy more than the stock available
 bestBuy :: TraderState -> TraderState
-bestBuy state = if H.isEmpty (buyHeap state) then state else
-    maybe (state) (remainder . snd) bestPurchase
-    where bestPurchase = viewHead (buyHeap state)
+bestBuy state = if S.null (buyHeap state) then state else
+    (remainder) bestPurchase
+    where bestPurchase = findMin $ buyHeap state
           remainder ent = state {promises = (buyPromise ent):(promises state), money = (money state)-(buyCost ent)}
           buyPromise h = TraderPromise $ makeEntry h (tCurrTime state) (buyPrice h) (buyAmount h) traderId 'B'
           canAfford h = truncate $ (money state) / (buyPrice h)
@@ -99,13 +100,13 @@ bestBuy state = if H.isEmpty (buyHeap state) then state else
 
 -- Simply hawk off the cheapest stock we own at the highest price we know
 bestSell :: TraderState -> TraderState
-bestSell state = if H.isEmpty (heldHeap state) then state else
-    maybe (state) (sellOrder) bestSell
-    where bestSell = view (heldHeap state)
-          bestBuyer = viewHead (sellHeap state)
+bestSell state = if S.null (heldHeap state) then state else
+    sellOrder bestSell
+    where bestSell = findMin (heldHeap state)
+          bestBuyer = S.findMin $ sellHeap state
           bestPrice ent = maybe (9999) (id) (price $ snd ent)
-          sellOrder s = state {promises = (sellPromise (fst s) (maybe (fst s) (id) bestBuyer)):(promises state), heldHeap = snd s}
-          sellPromise s b = TraderPromise $ (snd s) {price = Just (bestPrice b)}
+          sellOrder s = state {promises = (sellPromise s (bestBuyer)):(promises state), heldHeap = deleteMin (heldHeap state)}
+          sellPromise s b = TraderPromise $ s {price = Just (maybe (0) (id) $ price b)}
 
 ----------------------
 -----  Strategy ------

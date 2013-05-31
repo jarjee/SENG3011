@@ -5,6 +5,7 @@ import Control.Monad
 import Data.List
 import qualified Data.Vector as V
 import Data.Heap as H
+import Data.Set as S
 import Data.Csv hiding (encode)
 import Text.JSON
 import Debug.Trace
@@ -51,10 +52,9 @@ dataProcessing input (head, fields) = do
 --        startTState = startTState {money = cash}
         startGState = defaultGlobalState {mainInput = input, traderState = startTState, traderRecords = allRecords}
         tradeResult = mainLoop allRecords startGState
-        --evaluation = compileEvalInfo cash (money $ traderState $ tradeResult) (traderRecords $ tradeResult) (boughtShares $ tradeResult)
-        --evalJSON = encode $ convertEval evaluation
-    --writeFile outputJSONFile evalJSON
-    putStrLn $ show $ length $ avg $ traderState tradeResult
+        evaluation = compileEvalInfo cash (money $ traderState $ tradeResult) (traderRecords $ tradeResult) (boughtShares $ tradeResult)
+        evalJSON = encode $ convertEval evaluation
+    writeFile outputJSONFile evalJSON
     putStrLn outputJSONFile
 {-
     putStrLn $ "The Trader was given : $"++show(cash)
@@ -70,21 +70,20 @@ mainLoop (record:rest) state = mainLoop rest newState
     where newObookState1 = updateOrderBook record (oBookState state)
           algoFunction = algorithm $ mainInput state
           tempNewState1 = state {oBookState = newObookState1}
-          newTraderState = algoFunction $ traderState tempNewState1
-          tempNewState2 = tempNewState1 {traderState = newTraderState {avg = V.toList (lastSamples newObookState1)}}
+          newTraderState = algoFunction $ (traderState tempNewState1) {avg = V.toList (lastSamples newObookState1), sellHeap = (buyPrices newObookState1), buyHeap = (sellPrices newObookState1)}
+          tempNewState2 = tempNewState1 {traderState = newTraderState}
           -- do things for evaluator here
           tempNewState3 = tempNewState2 {boughtShares = (boughtShares $ tempNewState2) ++ (convertPromises $ promises $ traderState $ tempNewState2)}
           -- end of things for evaluator
           newObookState2 = fulfillPromises (promises $ traderState $ tempNewState3) (oBookState $ tempNewState3)
-          newObookState3 = matchTrades newObookState2
+          newObookState3 = newObookState2--matchTrades newObookState2
           newMoney = traderMoney $ newObookState3
           tHeldHeap = heldHeap $ newTraderState
           oBookTraderSharesHeap = traderShares $ newObookState3
-          newHeap = H.union tHeldHeap oBookTraderSharesHeap
-          newObookState4 = newObookState3 {traderMoney = 0, traderShares = H.empty}
+          newHeap = S.union tHeldHeap oBookTraderSharesHeap
+          newObookState4 = newObookState3 {traderMoney = 0, traderShares = S.empty}
           newTraderState2 = newTraderState {promises = [], money = (money newTraderState) + newMoney, heldHeap = newHeap}
-          newState = tempNewState2 {traderState = newTraderState2, oBookState = newObookState4}
-          --newState = tempNewState2
+          newState = tempNewState3 {traderState = newTraderState2, oBookState = newObookState4}
 
 convertPromises :: [TraderPromise] -> [OrderBookEntry]
 convertPromises [] = []

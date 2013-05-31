@@ -1,9 +1,13 @@
 module MakeData where
-
 import System.Random
 import System.IO.Unsafe
 import Text.JSON
 import System.IO
+import Control.Monad.Trans.Writer.Strict
+import Control.Proxy
+
+
+{-# NOINLINE myRandom #-}
 
 data Evaluation = 
         Evaluation {startMon :: Double,
@@ -71,10 +75,10 @@ randomTimeString = timeString
           timeString = (show hours) ++ ":" ++ (show minutes) ++ ":" ++ (show seconds) ++ "." ++ (show milSeconds)
 
 randomPrice :: Double
-randomPrice = myRandom 10 50
+randomPrice l h = myRandom l h
 
-myRandom :: Double -> Double -> Double
-myRandom x y = unsafePerformIO $ randomRIO (x,y)
+myRandom :: Double -> Double -> IO Double
+myRandom x y = randomRIO (x,y)
 
 sortPeaks :: [(String,Double)] -> [(String,Double)]
 sortPeaks [] = []

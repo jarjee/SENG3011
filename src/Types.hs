@@ -55,7 +55,10 @@ data OrderBookEntry =
                          -- buyerBrokerId :: Maybe Integer, -- When bidAsk is A
                          -- sellerBrokerId :: Maybe Integer -- When bidAsk is B
                         trans :: Maybe TransId
-        } deriving (Show, Eq, Ord)
+        } deriving (Show, Eq)
+
+instance Ord OrderBookEntry where
+    compare first second = (maybe (0) (id) (price first)) `compare` (maybe (0) (id) (price second))
 
 {-  Don't forget to calculate value! We don't rely on it, but not a good idea for invalid data to creep in!
     We currently ignore the transId. Since we're reading in data where we didn't exist, it isn't a good idea to
